@@ -9,7 +9,10 @@ import android.os.Bundle
 import android.os.PowerManager
 import android.os.VibrationEffect
 import android.os.Vibrator
+import android.view.GestureDetector
+import android.view.MotionEvent
 import android.view.WindowManager
+import kotlin.math.abs
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.ghadirb.yadavar.database.AppDatabase
@@ -28,6 +31,34 @@ class FullScreenAlarmActivity : AppCompatActivity() {
     private var wakeLock: PowerManager.WakeLock? = null
     private var reminderId: Long = -1
     private var isSmart = false
+
+    /** Physical swipe right = dismiss, swipe left = snooze - additive to the buttons below,
+     *  not a replacement, so the alarm is always dismissible even for someone who doesn't
+     *  discover or trust the gesture. */
+    private val gestureDetector by lazy {
+        GestureDetector(this, object : GestureDetector.SimpleOnGestureListener() {
+            override fun onFling(
+                e1: MotionEvent?,
+                e2: MotionEvent,
+                velocityX: Float,
+                velocityY: Float
+            ): Boolean {
+                val start = e1 ?: return false
+                val diffX = e2.x - start.x
+                val diffY = e2.y - start.y
+                if (abs(diffX) <= abs(diffY)) return false
+                val thresholdPx = 100 * resources.displayMetrics.density
+                if (abs(diffX) < thresholdPx || abs(velocityX) < 250) return false
+                if (diffX > 0) {
+                    sendActionBroadcast(ReminderActionReceiver.ACTION_DONE)
+                } else {
+                    sendActionBroadcast(ReminderActionReceiver.ACTION_SNOOZE)
+                }
+                finish()
+                return true
+            }
+        })
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -52,6 +83,8 @@ class FullScreenAlarmActivity : AppCompatActivity() {
         binding.textDescription.text = descExtra.orEmpty()
         binding.textHint.text = if (isSmart) getString(com.ghadirb.yadavar.R.string.alert_smart) else getString(com.ghadirb.yadavar.R.string.alert_full_screen)
         binding.textHint.visibility = android.view.View.VISIBLE
+        @Suppress("ClickableViewAccessibility")
+        binding.root.setOnTouchListener { _, event -> gestureDetector.onTouchEvent(event) }
 
         lifecycleScope.launch {
             val reminder = AppDatabase.getInstance(applicationContext).reminderDao().getById(reminderId)

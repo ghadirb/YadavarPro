@@ -118,19 +118,26 @@
             android:text="@string/label_sound"
             android:layout_marginTop="12dp"
             android:textColor="@color/text_secondary" />
-        <TextView
-            android:id="@+id/text_sound_name"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/sound_default"
-            android:textColor="@color/text_primary"
-            android:textStyle="bold" />
         <LinearLayout
-            android:id="@+id/sound_list"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:layout_marginTop="4dp" />
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+            <TextView
+                android:id="@+id/text_sound_name"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:text="@string/sound_default"
+                android:textColor="@color/text_primary"
+                android:textStyle="bold" />
+            <Button
+                android:id="@+id/button_choose_sound"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/choose_sound" />
+        </LinearLayout>
         <Button
             android:id="@+id/button_pick_device_sound"
             style="@style/Widget.MaterialComponents.Button.OutlinedButton"

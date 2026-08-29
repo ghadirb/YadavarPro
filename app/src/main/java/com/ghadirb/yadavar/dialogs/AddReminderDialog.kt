@@ -2,15 +2,12 @@ package com.ghadirb.yadavar.dialogs
 
 import android.app.TimePickerDialog
 import android.content.Intent
-import android.media.MediaPlayer
-import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
-import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.activityViewModels
@@ -34,7 +31,7 @@ class AddReminderDialog : DialogFragment() {
     private var loaded: ReminderEntity? = null
     private val calendar = Calendar.getInstance()
     private var customSoundUri: String? = null
-    private var previewPlayer: MediaPlayer? = null
+    private var selectedBuiltInSound: String = ReminderSound.DEFAULT_ALARM
 
     private val pickAudio = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri == null) return@registerForActivityResult
@@ -75,7 +72,7 @@ class AddReminderDialog : DialogFragment() {
         binding.spinnerCategory.adapter = ArrayAdapter(ctx, android.R.layout.simple_spinner_dropdown_item, CategoryCatalog.allNames())
 
         bindWeekdayChips()
-        bindSoundList()
+        binding.textSoundName.text = ReminderSound.labelFor(selectedBuiltInSound)
 
         binding.spinnerRepeat.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, v: View?, position: Int, id: Long) {
@@ -99,6 +96,7 @@ class AddReminderDialog : DialogFragment() {
         binding.buttonPickDeviceSound.setOnClickListener {
             pickAudio.launch(arrayOf("audio/*", "audio/mpeg", "audio/mp3", "audio/wav"))
         }
+        binding.buttonChooseSound.setOnClickListener { openSoundPicker() }
         binding.buttonSave.setOnClickListener { save() }
         binding.buttonCancel.setOnClickListener { dismiss() }
     }
@@ -116,64 +114,17 @@ class AddReminderDialog : DialogFragment() {
         }
     }
 
-    private fun bindSoundList() {
-        val container = binding.soundList
-        container.removeAllViews()
-        ReminderSound.builtIns.forEach { sound ->
-            val row = layoutInflater.inflate(R.layout.item_sound_row, container, false)
-            val name = row.findViewById<android.widget.TextView>(R.id.text_sound_label)
-            val play = row.findViewById<android.widget.ImageButton>(R.id.button_play)
-            val radio = row.findViewById<android.widget.RadioButton>(R.id.radio_sound)
-            name.text = sound.label
-            radio.tag = sound.value
-            radio.setOnClickListener {
-                customSoundUri = null
-                clearSoundRadios(sound.value)
-                binding.textSoundName.text = sound.label
-            }
-            play.setOnClickListener { preview(sound.value) }
-            if (sound.value == ReminderSound.DEFAULT_ALARM) radio.isChecked = true
-            container.addView(row)
-        }
+    /** Opens the scrollable bottom-sheet sound picker instead of inflating all built-in
+     *  sounds inline, so this dialog's own height no longer depends on the sound catalog size. */
+    private fun openSoundPicker() {
+        SoundPickerBottomSheet(currentValue = selectedBuiltInSound) { value ->
+            customSoundUri = null
+            selectedBuiltInSound = value
+            binding.textSoundName.text = ReminderSound.labelFor(value)
+        }.show(parentFragmentManager, "sound_picker")
     }
 
-    private fun clearSoundRadios(selected: String) {
-        val container = binding.soundList
-        for (i in 0 until container.childCount) {
-            val radio = container.getChildAt(i).findViewById<android.widget.RadioButton>(R.id.radio_sound)
-            radio.isChecked = radio.tag == selected
-        }
-    }
-
-    private fun selectedSoundValue(): String {
-        customSoundUri?.let { return it }
-        val container = binding.soundList
-        for (i in 0 until container.childCount) {
-            val radio = container.getChildAt(i).findViewById<android.widget.RadioButton>(R.id.radio_sound)
-            if (radio.isChecked) return radio.tag as String
-        }
-        return ReminderSound.DEFAULT_ALARM
-    }
-
-    private fun preview(value: String) {
-        stopPreview()
-        try {
-            val uri = ReminderSound.toUri(requireContext(), value) ?: return
-            previewPlayer = MediaPlayer().apply {
-                setDataSource(requireContext(), uri)
-                setOnCompletionListener { stopPreview() }
-                prepare()
-                start()
-            }
-        } catch (_: Exception) {
-            Toast.makeText(requireContext(), R.string.sound_preview_failed, Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    private fun stopPreview() {
-        runCatching { previewPlayer?.stop(); previewPlayer?.release() }
-        previewPlayer = null
-    }
+    private fun selectedSoundValue(): String = customSoundUri ?: selectedBuiltInSound
 
     private fun applyReminder(reminder: ReminderEntity) {
         loaded = reminder
@@ -197,7 +148,8 @@ class AddReminderDialog : DialogFragment() {
             customSoundUri = reminder.soundUri
             binding.textSoundName.text = getString(R.string.sound_from_device)
         } else {
-            clearSoundRadios(reminder.soundUri)
+            customSoundUri = null
+            selectedBuiltInSound = reminder.soundUri
             binding.textSoundName.text = ReminderSound.labelFor(reminder.soundUri)
         }
         updateDateTimeLabel()
@@ -292,7 +244,6 @@ class AddReminderDialog : DialogFragment() {
     }
 
     override fun onDestroyView() {
-        stopPreview()
         super.onDestroyView()
         _binding = null
     }

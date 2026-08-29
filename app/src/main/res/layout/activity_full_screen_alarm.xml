@@ -49,4 +49,14 @@
         android:layout_marginTop="10dp"
         android:text="@string/action_snooze"
         android:textColor="@android:color/white" />
+
+    <TextView
+        android:id="@+id/text_swipe_hint"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="18dp"
+        android:alpha="0.75"
+        android:text="@string/full_screen_swipe_hint"
+        android:textColor="@android:color/white"
+        android:textSize="12sp" />
 </LinearLayout>

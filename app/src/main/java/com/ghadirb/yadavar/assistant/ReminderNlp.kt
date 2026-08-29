@@ -202,7 +202,7 @@ object ReminderNlp {
                 n.contains("قرص") || n.contains("دارو") -> "دارو"
                 n.contains("ورزش") || n.contains("دکتر") || n.contains("پزشک") -> "سلامت"
                 n.contains("خرید") || n.contains("فروشگاه") -> "خرید"
-                n.contains("قبض") || n.contains("قسط") -> "قبض"
+                n.contains("قبض") -> "قبض"
                 n.contains("جلسه") || n.contains("اداره") || n.contains("کار") -> "کار"
                 n.contains("مهمانی") || n.contains("تولد") -> "مهمانی"
                 else -> "عمومی"

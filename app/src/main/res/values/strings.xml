@@ -6,6 +6,7 @@
     <string name="quiet_hours_channel">Quiet hours</string>
     <string name="action_done">Done</string>
     <string name="action_snooze">Snooze</string>
+    <string name="full_screen_swipe_hint">Swipe right to dismiss, left to snooze</string>
     <string name="action_call">Call</string>
     <string name="action_save">Save</string>
     <string name="action_cancel">Cancel</string>
@@ -121,6 +122,9 @@
     <string name="sound_from_device">Song picked from device</string>
     <string name="pick_device_sound">Pick a song from the phone</string>
     <string name="play_sound">Play</string>
+    <string name="stop_sound">Stop</string>
+    <string name="choose_sound">Change sound</string>
+    <string name="sound_picker_title">Choose a reminder sound</string>
     <string name="sound_preview_failed">Could not play this sound</string>
     <string name="alert_none">No alert</string>
     <string name="alert_notification">Notification</string>

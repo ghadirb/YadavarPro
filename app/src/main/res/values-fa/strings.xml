@@ -6,6 +6,7 @@
     <string name="quiet_hours_channel">ساعت سکوت</string>
     <string name="action_done">انجام شد</string>
     <string name="action_snooze">بعداً یادآوری کن</string>
+    <string name="full_screen_swipe_hint">برای قطع به راست بکشید، برای تعویق به چپ بکشید</string>
     <string name="action_call">تماس</string>
     <string name="action_save">ذخیره</string>
     <string name="action_cancel">انصراف</string>
@@ -121,6 +122,9 @@
     <string name="sound_from_device">آهنگ انتخاب‌شده از گوشی</string>
     <string name="pick_device_sound">انتخاب آهنگ از گوشی</string>
     <string name="play_sound">پخش</string>
+    <string name="stop_sound">توقف</string>
+    <string name="choose_sound">تغییر صدا</string>
+    <string name="sound_picker_title">انتخاب صدای یادآوری</string>
     <string name="sound_preview_failed">پخش این صدا ممکن نشد</string>
     <string name="alert_none">بدون هشدار</string>
     <string name="alert_notification">نوتیفیکیشن</string>
