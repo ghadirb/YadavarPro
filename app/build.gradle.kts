@@ -1,8 +1,35 @@
+import java.io.File
+import java.io.FileInputStream
+import java.util.Properties
+
+fun projectSetting(name: String): String =
+    providers.gradleProperty(name).orNull ?: System.getenv(name).orEmpty()
+
+fun buildConfigString(value: String): String =
+    "\"${value.replace("\\", "\\\\").replace("\"", "\\\"")}\""
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("kotlin-kapt")
 }
+
+// Local: keystore.properties (gitignored). CI: GitHub Actions secrets → env vars.
+// Never hardcode passwords here — a leaked fallback would let anyone sign as us.
+val keystoreProperties = Properties()
+val keystorePropertiesFile = rootProject.file("keystore.properties")
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+} else {
+    System.getenv("KEYSTORE_STORE_PASSWORD")?.let { keystoreProperties.setProperty("storePassword", it) }
+    System.getenv("KEYSTORE_KEY_PASSWORD")?.let { keystoreProperties.setProperty("keyPassword", it) }
+    System.getenv("KEYSTORE_KEY_ALIAS")?.let { keystoreProperties.setProperty("keyAlias", it) }
+    System.getenv("KEYSTORE_STORE_FILE")?.let { keystoreProperties.setProperty("storeFile", it) }
+}
+
+val canSignRelease = !keystoreProperties.getProperty("storeFile").isNullOrBlank() &&
+    !keystoreProperties.getProperty("storePassword").isNullOrBlank() &&
+    !keystoreProperties.getProperty("keyAlias").isNullOrBlank()
 
 android {
     namespace = "com.ghadirb.yadavar"
@@ -12,27 +39,42 @@ android {
         applicationId = "com.ghadirb.yadavar"
         minSdk = 24
         targetSdk = 34
-        versionCode = 2
-        versionName = "1.1.0"
+        versionCode = 3
+        versionName = "1.2.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
-    // Same two-store setup as Maliar-Pro (see ghadirb/Maliar-Pro/app/build.gradle.kts):
-    // each flavor gets its own applicationId-scoped market placeholders. "direct" is kept
-    // for local/sideload testing builds that never touch either store's billing service.
+    // Same two-store setup as Maliar-Pro. "direct" is for local/sideload testing.
     flavorDimensions += "store"
     productFlavors {
         create("direct") {
             dimension = "store"
             buildConfigField("String", "STORE_CHANNEL", "\"direct\"")
+            buildConfigField("String", "IAB_PUBLIC_KEY", "\"\"")
         }
         create("bazaar") {
             dimension = "store"
             buildConfigField("String", "STORE_CHANNEL", "\"bazaar\"")
+            buildConfigField("String", "IAB_PUBLIC_KEY", buildConfigString(projectSetting("BAZAAR_IAB_PUBLIC_KEY")))
         }
         create("myket") {
             dimension = "store"
             buildConfigField("String", "STORE_CHANNEL", "\"myket\"")
+            buildConfigField("String", "IAB_PUBLIC_KEY", buildConfigString(projectSetting("MYKET_IAB_PUBLIC_KEY")))
+        }
+    }
+
+    signingConfigs {
+        if (canSignRelease) {
+            create("release") {
+                val storeFilePath = keystoreProperties.getProperty("storeFile")
+                val f = File(storeFilePath)
+                storeFile = if (f.isAbsolute) f else rootProject.file(storeFilePath)
+                storePassword = keystoreProperties.getProperty("storePassword")
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+                    ?: keystoreProperties.getProperty("storePassword")
+            }
         }
     }
 
@@ -43,6 +85,9 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            if (canSignRelease) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 
@@ -75,23 +120,13 @@ dependencies {
     implementation("androidx.cardview:cardview:1.0.0")
     implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
 
-    // Persistence
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")
     kapt("androidx.room:room-compiler:2.6.1")
 
-    // Scheduling: WorkManager for periodic/subscription reminders, AlarmManager (platform
-    // API, no dependency) for exact-time alarms - same split Maliar-Pro uses.
     implementation("androidx.work:work-runtime-ktx:2.9.0")
-
-    // Location-based reminders
     implementation("com.google.android.gms:play-services-location:21.2.0")
-
-    // JSON for backup/restore export-import
     implementation("com.google.code.gson:gson:2.10.1")
-
-    // Home screen widget uses RemoteViews + a lightweight glance-free ListView provider -
-    // no extra dependency needed beyond androidx.core, already included above.
 
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")

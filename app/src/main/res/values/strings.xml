@@ -59,4 +59,20 @@
     <string name="widget_focus_on">Focus on</string>
     <string name="widget_focus_off">Focus</string>
     <string name="widget_add">Add</string>
+    <string name="nav_reminders">Reminders</string>
+    <string name="nav_assistant">Assistant</string>
+    <string name="assistant_title">Reminder assistant</string>
+    <string name="assistant_hint">Tomorrow 8am take medicine</string>
+    <string name="assistant_send">Send</string>
+    <string name="assistant_chip_today">Today</string>
+    <string name="assistant_chip_tomorrow">Tomorrow 9am</string>
+    <string name="assistant_chip_quiet">Quiet hours on</string>
+    <string name="assistant_chip_help">Help</string>
+    <string name="assistant_api_title">Optional AI key</string>
+    <string name="assistant_api_help">On-device parsing works without a key. A GapGPT / OpenAI-compatible key enables free-form chat. Never about finance.</string>
+    <string name="assistant_api_key">API key</string>
+    <string name="assistant_api_url">Base URL</string>
+    <string name="assistant_api_model">Model</string>
+    <string name="assistant_api_save">Save AI settings</string>
+    <string name="assistant_api_saved">AI settings saved</string>
 </resources>

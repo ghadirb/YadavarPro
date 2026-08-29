@@ -81,6 +81,12 @@ class SettingsActivity : AppCompatActivity() {
         binding.buttonExport.setOnClickListener { exportLauncher.launch("yadavar-backup.json") }
         binding.buttonImport.setOnClickListener { importLauncher.launch(arrayOf("application/json", "text/*")) }
         binding.buttonDndAccess.setOnClickListener { requestPolicyAccess() }
+        binding.buttonSaveApi.setOnClickListener {
+            viewModel.prefs.aiApiKey = binding.inputApiKey.text?.toString().orEmpty().trim()
+            viewModel.prefs.aiBaseUrl = binding.inputApiUrl.text?.toString().orEmpty().trim()
+            viewModel.prefs.aiModel = binding.inputApiModel.text?.toString().orEmpty().trim()
+            Toast.makeText(this, R.string.assistant_api_saved, Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun bind() {
@@ -98,6 +104,9 @@ class SettingsActivity : AppCompatActivity() {
             QuietMode.PRIORITY -> binding.radioPriority.isChecked = true
             QuietMode.VIBRATE -> binding.radioVibrate.isChecked = true
         }
+        binding.inputApiKey.setText(p.aiApiKey)
+        binding.inputApiUrl.setText(p.aiBaseUrl)
+        binding.inputApiModel.setText(p.aiModel)
     }
 
     private fun pickTime(start: Boolean) {

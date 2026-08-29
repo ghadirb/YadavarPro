@@ -59,4 +59,20 @@
     <string name="widget_focus_on">تمرکز روشن</string>
     <string name="widget_focus_off">تمرکز</string>
     <string name="widget_add">جدید</string>
+    <string name="nav_reminders">یادآوری‌ها</string>
+    <string name="nav_assistant">دستیار</string>
+    <string name="assistant_title">دستیار یادآوری</string>
+    <string name="assistant_hint">فردا ساعت ۸ دارو بخور</string>
+    <string name="assistant_send">ارسال</string>
+    <string name="assistant_chip_today">امروز</string>
+    <string name="assistant_chip_tomorrow">فردا ۹ صبح</string>
+    <string name="assistant_chip_quiet">سکوت شبانه</string>
+    <string name="assistant_chip_help">کمک</string>
+    <string name="assistant_api_title">کلید هوش مصنوعی (اختیاری)</string>
+    <string name="assistant_api_help">بدون کلید هم دستورهای فارسی فهمیده می‌شود. کلید GapGPT یا سازگار با OpenAI فقط برای گفتگوی آزاد است — نه مسائل مالی.</string>
+    <string name="assistant_api_key">کلید API</string>
+    <string name="assistant_api_url">آدرس پایه</string>
+    <string name="assistant_api_model">مدل</string>
+    <string name="assistant_api_save">ذخیره تنظیمات هوش مصنوعی</string>
+    <string name="assistant_api_saved">تنظیمات هوش مصنوعی ذخیره شد</string>
 </resources>

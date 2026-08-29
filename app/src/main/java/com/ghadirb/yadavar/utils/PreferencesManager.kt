@@ -43,6 +43,18 @@ class PreferencesManager(context: Context) {
         get() = prefs.getBoolean(KEY_GROUP, true)
         set(value) = prefs.edit().putBoolean(KEY_GROUP, value).apply()
 
+    var aiApiKey: String
+        get() = prefs.getString(KEY_AI_KEY, "").orEmpty()
+        set(value) = prefs.edit().putString(KEY_AI_KEY, value).apply()
+
+    var aiBaseUrl: String
+        get() = prefs.getString(KEY_AI_URL, "https://api.gapgpt.app/v1").orEmpty()
+        set(value) = prefs.edit().putString(KEY_AI_URL, value).apply()
+
+    var aiModel: String
+        get() = prefs.getString(KEY_AI_MODEL, "gpt-4o-mini").orEmpty()
+        set(value) = prefs.edit().putString(KEY_AI_MODEL, value).apply()
+
     fun formatMinutes(total: Int): String {
         val h = (total / 60) % 24
         val m = total % 60
@@ -60,5 +72,8 @@ class PreferencesManager(context: Context) {
         private const val KEY_QH_ANNOUNCE = "quiet_hours_announce"
         private const val KEY_FOCUS = "focus_mode"
         private const val KEY_GROUP = "group_by_category"
+        private const val KEY_AI_KEY = "ai_api_key"
+        private const val KEY_AI_URL = "ai_base_url"
+        private const val KEY_AI_MODEL = "ai_model"
     }
 }
