@@ -5,6 +5,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.os.Build
 import com.ghadirb.yadavar.database.ReminderScheduler
+import com.ghadirb.yadavar.utils.QuietHoursManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -19,6 +20,7 @@ class YadavarApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
+        QuietHoursManager.schedule(applicationContext)
         CoroutineScope(Dispatchers.IO + SupervisorJob()).launch {
             ReminderScheduler.rescheduleAll(applicationContext)
         }

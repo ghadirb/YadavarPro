@@ -12,6 +12,9 @@ interface ReminderDao {
     @Query("SELECT * FROM reminders WHERE isCompleted = 0 ORDER BY triggerTime ASC")
     fun getActive(): Flow<List<ReminderEntity>>
 
+    @Query("SELECT * FROM reminders WHERE isCompleted = 1 ORDER BY completedAt DESC")
+    fun getCompleted(): Flow<List<ReminderEntity>>
+
     @Query("SELECT * FROM reminders WHERE isCompleted = 0 AND triggerTime BETWEEN :from AND :to ORDER BY triggerTime ASC")
     fun getUpcoming(from: Long, to: Long): Flow<List<ReminderEntity>>
 
@@ -47,4 +50,7 @@ interface ReminderDao {
 
     @Query("DELETE FROM reminders WHERE id = :id")
     suspend fun deleteById(id: Long)
+
+    @Query("DELETE FROM reminders")
+    suspend fun deleteAll()
 }

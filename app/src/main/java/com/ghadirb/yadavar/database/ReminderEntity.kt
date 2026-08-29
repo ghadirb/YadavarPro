@@ -43,7 +43,7 @@ data class ReminderEntity(
     val createdAt: Long = System.currentTimeMillis(),
     val tags: String = "",
     val category: String = "",
-    val categoryColor: String = "#3F51B5",
+    val categoryColor: String = "#6D5EF5",
 
     val relatedPerson: String = "",
     val contactName: String = "",
@@ -56,7 +56,10 @@ data class ReminderEntity(
     /** Per-reminder sound: DEFAULT_ALARM, "RAW:<res name>" for a built-in Persian voice
      *  clip, or a persisted content:// URI for a sound picked from the device (see
      *  ReminderSound.kt) - ported from the same Maliar-Pro branch. */
-    val soundUri: String = "DEFAULT_ALARM"
+    val soundUri: String = "DEFAULT_ALARM",
+
+    /** If true, this reminder still rings during quiet hours / focus mode. */
+    val bypassQuietHours: Boolean = false
 )
 
 enum class ReminderType {

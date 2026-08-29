@@ -83,6 +83,17 @@ object PersianCalendarHelper {
         return "${j.day} ${months[j.month - 1]} ${j.year}"
     }
 
+    fun isJalaliLeap(year: Int): Boolean {
+        val r = year % 33
+        return r == 1 || r == 5 || r == 9 || r == 13 || r == 17 || r == 22 || r == 26 || r == 30
+    }
+
+    fun daysInJalaliMonth(year: Int, month: Int): Int = when {
+        month in 1..6 -> 31
+        month in 7..11 -> 30
+        else -> if (isJalaliLeap(year)) 30 else 29
+    }
+
     private fun isGregorianLeap(year: Int): Boolean =
         (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)
 

@@ -9,6 +9,7 @@
     <uses-permission android:name="android.permission.CALL_PHONE" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
 
@@ -29,7 +30,11 @@
             </intent-filter>
         </activity>
 
-        <!-- Full-screen alarm UI shown over the lock screen for high-priority reminders -->
+        <activity
+            android:name=".ui.settings.SettingsActivity"
+            android:exported="false"
+            android:label="@string/settings_title" />
+
         <activity
             android:name=".ui.reminders.FullScreenAlarmActivity"
             android:exported="false"
@@ -41,9 +46,8 @@
 
         <receiver android:name=".receivers.ReminderAlarmReceiver" android:exported="false" />
         <receiver android:name=".receivers.ReminderActionReceiver" android:exported="false" />
+        <receiver android:name=".receivers.QuietHoursReceiver" android:exported="false" />
 
-        <!-- Re-schedules all pending alarms after a reboot (AlarmManager alarms don't
-             survive a restart on their own). -->
         <receiver android:name=".receivers.BootReceiver" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
