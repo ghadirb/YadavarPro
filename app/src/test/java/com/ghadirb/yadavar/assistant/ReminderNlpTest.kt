@@ -36,6 +36,8 @@ class ReminderNlpTest {
         assertEquals(6, cal.get(Calendar.HOUR_OF_DAY))
         assertEquals(42, cal.get(Calendar.MINUTE))
         assertEquals("دارو", intent.category)
+        assertTrue(intent.title.contains("دارو"))
+        assertTrue(!intent.title.contains("42"))
     }
 
     @Test

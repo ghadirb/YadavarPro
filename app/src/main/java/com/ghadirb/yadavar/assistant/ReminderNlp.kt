@@ -342,10 +342,10 @@ object ReminderNlp {
     }
 
     private fun extractTitle(original: String, n: String): String {
-        var t = original.trim()
+        var t = n
         listOf(
             "یادت باشه", "یادم باشه", "یک یادآوری", "یه یادآوری", "یادآوری کن",
-            "یادآوری", "آلارم", "بذار", "ثبت کن"
+            "یادآوری", "آلارم", "بذار", "ثبت کن", "بخور"
         ).forEach { token ->
             t = t.replace(token, " ", ignoreCase = true)
         }
