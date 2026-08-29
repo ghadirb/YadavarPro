@@ -8,4 +8,5 @@
     <color name="text_secondary">#B8B0CC</color>
     <color name="quiet_banner">#2A2150</color>
     <color name="on_quiet_banner">#EDE7FF</color>
+    <color name="surface_accent">#FF2A2140</color>
 </resources>

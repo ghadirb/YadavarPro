@@ -12,6 +12,7 @@ import androidx.appcompat.app.AppCompatActivity
 import com.ghadirb.yadavar.R
 import com.ghadirb.yadavar.databinding.ActivitySettingsBinding
 import com.ghadirb.yadavar.ui.reminders.RemindersViewModel
+import com.ghadirb.yadavar.ui.subscription.SubscriptionActivity
 import com.ghadirb.yadavar.utils.QuietHoursManager
 import com.ghadirb.yadavar.utils.QuietMode
 import java.nio.charset.Charset
@@ -81,6 +82,9 @@ class SettingsActivity : AppCompatActivity() {
         binding.buttonExport.setOnClickListener { exportLauncher.launch("yadavar-backup.json") }
         binding.buttonImport.setOnClickListener { importLauncher.launch(arrayOf("application/json", "text/*")) }
         binding.buttonDndAccess.setOnClickListener { requestPolicyAccess() }
+        binding.buttonSubscription.setOnClickListener {
+            startActivity(Intent(this, SubscriptionActivity::class.java))
+        }
         binding.buttonSaveApi.setOnClickListener {
             viewModel.prefs.aiApiKey = binding.inputApiKey.text?.toString().orEmpty().trim()
             viewModel.prefs.aiBaseUrl = binding.inputApiUrl.text?.toString().orEmpty().trim()

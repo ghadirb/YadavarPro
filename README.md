@@ -3,7 +3,7 @@
 اپلیکیشن مستقل یادآوری، جدا شده از بخش یادآوری [ghadirb/Maliar-Pro](https://github.com/ghadirb/Maliar-Pro).
 
 `applicationId`: `com.ghadirb.yadavar`  
-نسخه فعلی: **۱.۲.۰** (`versionCode` 3)
+نسخه فعلی: **۱.۳.۰** (`versionCode` 4)
 
 ## این پروژه از کجا اومده
 
@@ -27,6 +27,7 @@
 - قالب‌های آماده، انتخابگر تاریخ شمسی، ویجت، پشتیبان JSON
 - **دستیار یادآوری**: دستور فارسی روی دستگاه (بدون اینترنت) + گفتگوی آزاد اختیاری با کلید API خودت
 - بیلد جدا برای کافه‌بازار / مایکت / نصب مستقیم
+- خرید درون‌برنامه‌ای (ماهانه/سالانه) با همان الگوی مالیار پرو
 
 ## دستیار و چت
 
@@ -39,7 +40,8 @@
 
 ## امضا و انتشار (بازار / مایکت)
 
-راهنمای کامل: [docs/SIGNING.md](docs/SIGNING.md)
+راهنمای امضا: [docs/SIGNING.md](docs/SIGNING.md)  
+راهنمای فروشگاه و پرداخت: [docs/STORE_SETUP_FA.md](docs/STORE_SETUP_FA.md)
 
 کلید امضا **ثابت و مخصوص همین اپ** است (جدا از مالیار پرو). ورک‌فلو گیت‌هاب از Secretها می‌خواند و APK/AAB دیباگ و ریلیز می‌سازد.
 
@@ -54,6 +56,12 @@ Actions → Android Builds → Run workflow
 1. Android Studio (JDK 17) — Gradle sync
 2. برای ریلیز محلی: `keystore.properties.example` را به `keystore.properties` کپی کن و `yadavar-release.jks` را کنارش بگذار
 3. دیباگ: `./gradlew :app:assembleDirectDebug`
+
+## نسخه ۱.۳
+- پرداخت درون‌برنامه‌ای بازار و مایکت (SKU: `yadavar_pro_monthly` / `yadavar_pro_yearly`)
+- صفحه اشتراک، سهمیه ۱۵ پیام ابری، کلید شخصی نامحدود
+- سرور تایید خرید (`server/`) مثل مالیار پرو
+- ورودی صوتی دستیار
 
 ## نسخه ۱.۲
 - ورک‌فلو GitHub Actions (دیباگ + ریلیز امضاشده برای بازار/مایکت)

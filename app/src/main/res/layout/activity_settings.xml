@@ -149,6 +149,22 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:text="@string/subscription_title"
+                android:textStyle="bold"
+                android:textColor="@color/text_primary"
+                android:textSize="16sp"
+                android:layout_marginTop="20dp" />
+
+            <Button
+                android:id="@+id/button_subscription"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="@string/subscription_open" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
                 android:text="@string/assistant_api_title"
                 android:textStyle="bold"
                 android:textColor="@color/text_primary"

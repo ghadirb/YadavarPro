@@ -39,28 +39,38 @@ android {
         applicationId = "com.ghadirb.yadavar"
         minSdk = 24
         targetSdk = 34
-        versionCode = 3
-        versionName = "1.2.0"
+        versionCode = 4
+        versionName = "1.3.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     // Same two-store setup as Maliar-Pro. "direct" is for local/sideload testing.
     flavorDimensions += "store"
     productFlavors {
+        // myket-billing-client merges placeholders into EVERY flavor, including direct.
         create("direct") {
             dimension = "store"
             buildConfigField("String", "STORE_CHANNEL", "\"direct\"")
             buildConfigField("String", "IAB_PUBLIC_KEY", "\"\"")
+            manifestPlaceholders["marketApplicationId"] = "com.ghadirb.yadavar"
+            manifestPlaceholders["marketBindAddress"] = "com.ghadirb.yadavar.UNUSED_BILLING_BIND"
+            manifestPlaceholders["marketPermission"] = "com.ghadirb.yadavar.permission.UNUSED_BILLING"
         }
         create("bazaar") {
             dimension = "store"
             buildConfigField("String", "STORE_CHANNEL", "\"bazaar\"")
             buildConfigField("String", "IAB_PUBLIC_KEY", buildConfigString(projectSetting("BAZAAR_IAB_PUBLIC_KEY")))
+            manifestPlaceholders["marketApplicationId"] = "com.farsitel.bazaar"
+            manifestPlaceholders["marketBindAddress"] = "ir.cafebazaar.pardakht.InAppBillingService.BIND"
+            manifestPlaceholders["marketPermission"] = "com.farsitel.bazaar.permission.PAY_THROUGH_BAZAAR"
         }
         create("myket") {
             dimension = "store"
             buildConfigField("String", "STORE_CHANNEL", "\"myket\"")
             buildConfigField("String", "IAB_PUBLIC_KEY", buildConfigString(projectSetting("MYKET_IAB_PUBLIC_KEY")))
+            manifestPlaceholders["marketApplicationId"] = "ir.mservices.market"
+            manifestPlaceholders["marketBindAddress"] = "ir.mservices.market.InAppBillingService.BIND"
+            manifestPlaceholders["marketPermission"] = "ir.mservices.market.BILLING"
         }
     }
 
@@ -127,6 +137,7 @@ dependencies {
     implementation("androidx.work:work-runtime-ktx:2.9.0")
     implementation("com.google.android.gms:play-services-location:21.2.0")
     implementation("com.google.code.gson:gson:2.10.1")
+    implementation("com.github.myketstore:myket-billing-client:1.19")
 
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")

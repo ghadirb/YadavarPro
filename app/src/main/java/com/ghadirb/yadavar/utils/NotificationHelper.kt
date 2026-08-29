@@ -12,6 +12,7 @@ import com.ghadirb.yadavar.R
 import com.ghadirb.yadavar.database.ReminderEntity
 import com.ghadirb.yadavar.receivers.ReminderActionReceiver
 import com.ghadirb.yadavar.ui.reminders.FullScreenAlarmActivity
+import com.ghadirb.yadavar.ui.subscription.SubscriptionActivity
 
 object NotificationHelper {
 
@@ -106,5 +107,73 @@ object NotificationHelper {
 
     fun dismiss(context: Context, reminderId: Long) {
         NotificationManagerCompat.from(context).cancel(reminderId.toInt())
+    }
+
+    private const val SUB_CHANNEL = "subscription_channel"
+    private const val ID_QUOTA = 5001
+    private const val ID_EXPIRY = 5002
+    private const val ID_EXPIRED = 5003
+
+    private fun ensureSubChannel(context: Context) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val manager = context.getSystemService(NotificationManager::class.java)
+            val channel = NotificationChannel(
+                SUB_CHANNEL,
+                context.getString(R.string.subscription_channel),
+                NotificationManager.IMPORTANCE_HIGH
+            )
+            manager.createNotificationChannel(channel)
+        }
+    }
+
+    private fun openSubscription(context: Context): PendingIntent {
+        val intent = Intent(context, SubscriptionActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        return PendingIntent.getActivity(
+            context, 0, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+    }
+
+    private fun showSub(context: Context, id: Int, title: String, text: String) {
+        ensureSubChannel(context)
+        val notification = NotificationCompat.Builder(context, SUB_CHANNEL)
+            .setSmallIcon(R.drawable.ic_notification_reminder)
+            .setContentTitle(title)
+            .setContentText(text)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+            .setAutoCancel(true)
+            .setContentIntent(openSubscription(context))
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .build()
+        try {
+            NotificationManagerCompat.from(context).notify(id, notification)
+        } catch (_: SecurityException) {
+        }
+    }
+
+    fun notifyQuotaExhausted(context: Context) {
+        showSub(
+            context, ID_QUOTA,
+            context.getString(R.string.quota_exhausted_title),
+            context.getString(R.string.quota_exhausted_body)
+        )
+    }
+
+    fun notifyExpiryReminder(context: Context, daysLeft: Int) {
+        showSub(
+            context, ID_EXPIRY,
+            context.getString(R.string.expiry_title),
+            context.getString(R.string.expiry_body, daysLeft)
+        )
+    }
+
+    fun notifyExpired(context: Context) {
+        showSub(
+            context, ID_EXPIRED,
+            context.getString(R.string.expired_title),
+            context.getString(R.string.expired_body)
+        )
     }
 }

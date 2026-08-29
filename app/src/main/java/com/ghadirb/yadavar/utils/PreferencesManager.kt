@@ -61,8 +61,49 @@ class PreferencesManager(context: Context) {
         return String.format("%02d:%02d", h, m)
     }
 
+    fun getOrCreateDeviceId(): String {
+        val existing = prefs.getString(KEY_DEVICE_ID, null)
+        if (!existing.isNullOrBlank()) return existing
+        val fresh = java.util.UUID.randomUUID().toString()
+        prefs.edit().putString(KEY_DEVICE_ID, fresh).apply()
+        return fresh
+    }
+
+    fun getPremiumUntil(): Long = prefs.getLong(KEY_PREMIUM_UNTIL, 0L)
+    fun setPremiumUntil(epochMillis: Long) {
+        prefs.edit().putLong(KEY_PREMIUM_UNTIL, epochMillis).apply()
+    }
+    fun getLastSubscriptionCheck(): Long = prefs.getLong(KEY_LAST_SUBSCRIPTION_CHECK, 0L)
+    fun setLastSubscriptionCheck(epochMillis: Long) {
+        prefs.edit().putLong(KEY_LAST_SUBSCRIPTION_CHECK, epochMillis).apply()
+    }
+    fun getDailyAiCount(): Int = prefs.getInt(KEY_DAILY_AI_COUNT, 0)
+    fun setDailyAiCount(count: Int, date: String) {
+        prefs.edit().putInt(KEY_DAILY_AI_COUNT, count).putString(KEY_DAILY_AI_COUNT_DATE, date).apply()
+    }
+    fun hasNotifiedQuotaExhausted(): Boolean = prefs.getBoolean(KEY_QUOTA_NOTIFIED, false)
+    fun setNotifiedQuotaExhausted(notified: Boolean) {
+        prefs.edit().putBoolean(KEY_QUOTA_NOTIFIED, notified).apply()
+    }
+    fun getExpiryReminderScheduledFor(): Long = prefs.getLong(KEY_EXPIRY_REMINDER_SCHEDULED_FOR, 0L)
+    fun setExpiryReminderScheduledFor(premiumUntil: Long) {
+        prefs.edit().putLong(KEY_EXPIRY_REMINDER_SCHEDULED_FOR, premiumUntil).apply()
+    }
+    fun getLastStoreChannel(): String? = prefs.getString(KEY_LAST_STORE_CHANNEL, null)
+    fun setLastStoreChannel(channel: String) {
+        prefs.edit().putString(KEY_LAST_STORE_CHANNEL, channel).apply()
+    }
+
     companion object {
         private const val PREFS = "yadavar_settings"
+        private const val KEY_DEVICE_ID = "device_id"
+        private const val KEY_PREMIUM_UNTIL = "premium_until"
+        private const val KEY_LAST_SUBSCRIPTION_CHECK = "last_subscription_check"
+        private const val KEY_DAILY_AI_COUNT = "daily_ai_count"
+        private const val KEY_DAILY_AI_COUNT_DATE = "daily_ai_count_date"
+        private const val KEY_QUOTA_NOTIFIED = "quota_exhausted_notified"
+        private const val KEY_EXPIRY_REMINDER_SCHEDULED_FOR = "expiry_reminder_scheduled_for"
+        private const val KEY_LAST_STORE_CHANNEL = "last_store_channel"
         private const val KEY_QH_ENABLED = "quiet_hours_enabled"
         private const val KEY_QH_START = "quiet_hours_start"
         private const val KEY_QH_END = "quiet_hours_end"

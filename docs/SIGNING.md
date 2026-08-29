@@ -102,10 +102,20 @@ keytool -list -v -keystore yadavar-release.jks -alias yadavar_pro_key
 فایل‌های `yadavar-release.jks` و `keystore.properties` را در جای امن (رمزنگاری‌شده، خارج از گیت) نگه دار.
 اگر جفت کلید گم شود، آپدیت روی همان بستهٔ فروشگاه غیرممکن است.
 
-## خرید درون‌برنامه‌ای (بعداً)
+## خرید درون‌برنامه‌ای (بازار / مایکت)
 
-فعلاً IAP در یادآور پرو فعال نیست. وقتی اضافه شد:
+سیستم پرداخت مثل مالیار پرو است. راهنمای کامل پنل فروشگاه و سرور:
 
-1. از پنل کافه‌بازار / مایکت کلید RSA عمومی برنامه را بردار
-2. همان را در Secretهای بالا بگذار
-3. ورک‌فلو خودش به Gradle پاس می‌دهد (`BAZAAR_IAB_PUBLIC_KEY` / `MYKET_IAB_PUBLIC_KEY`)
+[docs/STORE_SETUP_FA.md](STORE_SETUP_FA.md) و [server/README-fa.md](../server/README-fa.md)
+
+کارهایی که **تو** باید در پنل‌ها انجام بدهی (کد آماده است):
+
+1. در پیشخان کافه‌بازار و پنل مایکت دو محصول **مصرف‌شدنی** بساز:
+   - `yadavar_pro_monthly`
+   - `yadavar_pro_yearly`
+2. کلید RSA عمومی هر فروشگاه را در Secretهای `BAZAAR_IAB_PUBLIC_KEY` و `MYKET_IAB_PUBLIC_KEY` بگذار (یا در `keystore.properties` محلی).
+3. سرور `server/` را روی لیارا یا Apps Script دیپلوی کن و سه آدرس را در `SubscriptionManager.kt` به‌جای `CHANGE-ME` بگذار.
+4. توکن API پیشخان بازار و Access Token مایکت را فقط روی سرور بگذار — هرگز در گیت عمومی.
+
+تا وقتی آدرس سرور `CHANGE-ME` است، خرید موفق فروشگاه به‌صورت محلی پریمیوم می‌دهد (برای تست محصول). قبل از انتشار عمومی حتماً سرور را وصل کن.
+

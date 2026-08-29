@@ -9,6 +9,7 @@ import com.ghadirb.yadavar.database.ReminderEntity
 import com.ghadirb.yadavar.database.ReminderRepository
 import com.ghadirb.yadavar.database.ReminderType
 import com.ghadirb.yadavar.utils.PreferencesManager
+import com.ghadirb.yadavar.utils.SubscriptionManager
 import com.ghadirb.yadavar.utils.QuietHoursManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -77,13 +78,23 @@ class AssistantViewModel(app: Application) : AndroidViewModel(app) {
             }
             AssistantIntent.Help -> appendBot(WELCOME)
             is AssistantIntent.FreeChat -> {
+                val app = getApplication<Application>()
+                if (!SubscriptionManager.canUseAi(app)) {
+                    appendBot(SubscriptionManager.upgradeMessage(app))
+                    return
+                }
                 val context = buildContext()
                 val ai = AiClient.chat(
                     prefs,
                     SYSTEM,
                     "وضعیت فعلی:\n$context\n\nپیام کاربر:\n${intent.text}"
                 )
-                appendBot(ai ?: NO_AI)
+                if (ai != null) {
+                    SubscriptionManager.recordAiUsage(app)
+                    appendBot(ai)
+                } else {
+                    appendBot(NO_AI)
+                }
             }
         }
     }
