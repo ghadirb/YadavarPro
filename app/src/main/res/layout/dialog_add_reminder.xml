@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content">
 
@@ -9,20 +10,29 @@
         android:orientation="vertical"
         android:padding="20dp">
 
-        <EditText
-            android:id="@+id/edit_title"
+        <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="@string/hint_title"
-            android:inputType="text" />
+            android:hint="@string/hint_title">
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/edit_title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="text" />
+        </com.google.android.material.textfield.TextInputLayout>
 
-        <EditText
-            android:id="@+id/edit_description"
+        <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="@string/hint_description"
-            android:inputType="textMultiLine"
-            android:layout_marginTop="8dp" />
+            android:layout_marginTop="8dp"
+            android:hint="@string/hint_description">
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/edit_description"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="textMultiLine"
+                android:minLines="2" />
+        </com.google.android.material.textfield.TextInputLayout>
 
         <TextView
             android:layout_width="match_parent"
@@ -30,35 +40,104 @@
             android:text="@string/hint_category"
             android:layout_marginTop="12dp"
             android:textColor="@color/text_secondary" />
+        <Spinner android:id="@+id/spinner_category" android:layout_width="match_parent" android:layout_height="wrap_content" />
 
-        <Spinner
-            android:id="@+id/spinner_category"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
-
-        <Spinner
-            android:id="@+id/spinner_type"
+        <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp" />
+            android:text="@string/label_type"
+            android:layout_marginTop="10dp"
+            android:textColor="@color/text_secondary" />
+        <Spinner android:id="@+id/spinner_type" android:layout_width="match_parent" android:layout_height="wrap_content" />
 
-        <Spinner
-            android:id="@+id/spinner_priority"
+        <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp" />
+            android:text="@string/label_priority"
+            android:layout_marginTop="10dp"
+            android:textColor="@color/text_secondary" />
+        <Spinner android:id="@+id/spinner_priority" android:layout_width="match_parent" android:layout_height="wrap_content" />
 
-        <Spinner
-            android:id="@+id/spinner_repeat"
+        <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp" />
+            android:text="@string/label_alert"
+            android:layout_marginTop="10dp"
+            android:textColor="@color/text_secondary" />
+        <Spinner android:id="@+id/spinner_alert" android:layout_width="match_parent" android:layout_height="wrap_content" />
 
-        <Spinner
-            android:id="@+id/spinner_sound"
+        <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp" />
+            android:text="@string/label_repeat"
+            android:layout_marginTop="10dp"
+            android:textColor="@color/text_secondary" />
+        <Spinner android:id="@+id/spinner_repeat" android:layout_width="match_parent" android:layout_height="wrap_content" />
+
+        <LinearLayout
+            android:id="@+id/weekday_row"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone"
+            android:layout_marginTop="8dp">
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/label_weekdays"
+                android:textColor="@color/text_secondary" />
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/weekday_chips"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:singleSelection="false" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/interval_row"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone"
+            android:layout_marginTop="8dp">
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/hint_interval_days">
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/edit_interval"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="number" />
+            </com.google.android.material.textfield.TextInputLayout>
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/label_sound"
+            android:layout_marginTop="12dp"
+            android:textColor="@color/text_secondary" />
+        <TextView
+            android:id="@+id/text_sound_name"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/sound_default"
+            android:textColor="@color/text_primary"
+            android:textStyle="bold" />
+        <LinearLayout
+            android:id="@+id/sound_list"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginTop="4dp" />
+        <Button
+            android:id="@+id/button_pick_device_sound"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/pick_device_sound" />
 
         <CheckBox
             android:id="@+id/check_bypass_quiet"
@@ -72,19 +151,18 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:layout_marginTop="12dp">
-
             <Button
                 android:id="@+id/button_pick_date"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="@string/pick_date" />
-
             <Button
                 android:id="@+id/button_pick_time"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
+                android:layout_marginStart="8dp"
                 android:text="@string/pick_time" />
         </LinearLayout>
 
@@ -101,7 +179,6 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:layout_marginTop="16dp">
-
             <Button
                 android:id="@+id/button_cancel"
                 style="@style/Widget.MaterialComponents.Button.TextButton"
@@ -109,7 +186,6 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="@string/action_cancel" />
-
             <Button
                 android:id="@+id/button_save"
                 android:layout_width="0dp"
@@ -117,6 +193,5 @@
                 android:layout_weight="1"
                 android:text="@string/action_save" />
         </LinearLayout>
-
     </LinearLayout>
 </ScrollView>

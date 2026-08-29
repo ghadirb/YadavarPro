@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="primary">#A78BFA</color>
-    <color name="primary_dark">#120C1C</color>
-    <color name="accent">#2DD4BF</color>
-    <color name="background">#120C1C</color>
-    <color name="text_primary">#F4F0FF</color>
-    <color name="text_secondary">#B8B0CC</color>
-    <color name="quiet_banner">#2A2150</color>
-    <color name="on_quiet_banner">#EDE7FF</color>
-    <color name="surface_accent">#FF2A2140</color>
+    <color name="primary">#2DD4BF</color>
+    <color name="primary_dark">#0B1211</color>
+    <color name="accent">#5EEAD4</color>
+    <color name="background">#0B1211</color>
+    <color name="text_primary">#F4F1EA</color>
+    <color name="text_secondary">#A8A29E</color>
+    <color name="quiet_banner">#163532</color>
+    <color name="on_quiet_banner">#CCFBF1</color>
+    <color name="surface_accent">#FF14201E</color>
 </resources>

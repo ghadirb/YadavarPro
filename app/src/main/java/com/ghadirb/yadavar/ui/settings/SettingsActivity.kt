@@ -15,6 +15,7 @@ import com.ghadirb.yadavar.ui.reminders.RemindersViewModel
 import com.ghadirb.yadavar.ui.subscription.SubscriptionActivity
 import com.ghadirb.yadavar.utils.QuietHoursManager
 import com.ghadirb.yadavar.utils.QuietMode
+import com.ghadirb.yadavar.services.YadavarBackgroundService
 import java.nio.charset.Charset
 
 class SettingsActivity : AppCompatActivity() {
@@ -64,6 +65,13 @@ class SettingsActivity : AppCompatActivity() {
         binding.switchGroup.setOnCheckedChangeListener { _, checked ->
             viewModel.prefs.groupByCategory = checked
         }
+        binding.switchBackground.setOnCheckedChangeListener { _, checked ->
+            viewModel.prefs.setBackgroundServiceEnabled(checked)
+            if (checked) YadavarBackgroundService.start(this) else YadavarBackgroundService.stop(this)
+        }
+        binding.radioNotifNone.setOnClickListener { viewModel.prefs.setNotificationMode("none") }
+        binding.radioNotifSimple.setOnClickListener { viewModel.prefs.setNotificationMode("simple") }
+        binding.radioNotifAction.setOnClickListener { viewModel.prefs.setNotificationMode("action") }
         binding.switchCritical.setOnCheckedChangeListener { _, checked ->
             viewModel.prefs.allowCriticalInQuiet = checked
         }
@@ -98,6 +106,12 @@ class SettingsActivity : AppCompatActivity() {
         binding.switchQuietHours.isChecked = p.quietHoursEnabled
         binding.switchFocus.isChecked = p.focusModeEnabled
         binding.switchGroup.isChecked = p.groupByCategory
+        binding.switchBackground.isChecked = p.isBackgroundServiceEnabled()
+        when (p.getNotificationMode()) {
+            "none" -> binding.radioNotifNone.isChecked = true
+            "simple" -> binding.radioNotifSimple.isChecked = true
+            else -> binding.radioNotifAction.isChecked = true
+        }
         binding.switchCritical.isChecked = p.allowCriticalInQuiet
         binding.switchAnnounce.isChecked = p.quietHoursAnnounce
         binding.switchSystemDnd.isChecked = p.applySystemDnd

@@ -4,14 +4,23 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:gravity="center"
-    android:padding="24dp"
+    android:padding="28dp"
     android:background="@color/primary_dark">
+
+    <TextView
+        android:id="@+id/text_hint"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="#B7F0E8"
+        android:textSize="13sp"
+        android:visibility="gone" />
 
     <TextView
         android:id="@+id/text_title"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center"
+        android:layout_marginTop="16dp"
         android:textColor="@android:color/white"
         android:textSize="28sp"
         android:textStyle="bold" />
@@ -22,22 +31,22 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="12dp"
         android:gravity="center"
-        android:textColor="#EDE7FF"
+        android:textColor="#D7F6F1"
         android:textSize="16sp" />
 
     <Button
         android:id="@+id/button_dismiss"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="32dp"
+        android:layout_height="56dp"
+        android:layout_marginTop="40dp"
         android:text="@string/action_done" />
 
     <Button
         android:id="@+id/button_snooze"
         style="@style/Widget.MaterialComponents.Button.OutlinedButton"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:layout_height="56dp"
+        android:layout_marginTop="10dp"
         android:text="@string/action_snooze"
         android:textColor="@android:color/white" />
 </LinearLayout>

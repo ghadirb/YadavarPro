@@ -9,6 +9,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.ghadirb.yadavar.databinding.ItemReminderBinding
 import com.ghadirb.yadavar.databinding.ItemSectionHeaderBinding
 import com.ghadirb.yadavar.database.ReminderEntity
+import com.ghadirb.yadavar.utils.EnumLabels
 import com.ghadirb.yadavar.utils.PersianCalendarHelper
 import java.util.Calendar
 
@@ -62,6 +63,10 @@ class RemindersAdapter(
                 String.format("%02d:%02d", cal.get(Calendar.HOUR_OF_DAY), cal.get(Calendar.MINUTE))
             binding.textCategory.text = buildString {
                 append(item.category.ifBlank { "—" })
+                append("  ·  ")
+                append(EnumLabels.alertType(item.alertType))
+                append("  ·  ")
+                append(EnumLabels.repeat(item.repeatPattern))
                 if (item.bypassQuietHours) append("  ·  عبور از سکوت")
             }
             try {

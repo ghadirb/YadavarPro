@@ -55,8 +55,9 @@ class AssistantFragment : Fragment() {
 
         listOf(
             binding.chipToday to "یادآوری‌های امروز",
-            binding.chipTomorrow to "فردا ساعت ۹ یادآوری عمومی",
+            binding.chipTomorrow to "۶ و ۴۲ دقیقه صبح دارو بخور",
             binding.chipQuiet to "سکوت شبانه روشن",
+            binding.chipWeekdays to "شنبه تا چهارشنبه ساعت ۸ جلسه",
             binding.chipHelp to "کمک"
         ).forEach { (chip, prompt) ->
             chip.setOnClickListener { viewModel.send(prompt) }

@@ -17,18 +17,12 @@ import java.util.Locale
 import java.util.concurrent.TimeUnit
 
 /**
- * Same billing model as Maliar-Pro, applied only to the reminder assistant:
- * reminders, calendar, quiet hours, widget and backup stay free forever.
- * Shared/cloud AI chat is metered unless the user is premium or pasted a personal key.
- *
- * Replace STATUS_URL / REQUEST_URL / VERIFY_STORE_URL with your deployed backend
- * (see /server). Until then, store purchases still grant locally so you can test
- * Cafe Bazaar / Myket products before the server is live.
+ * Free forever: reminders, jalali calendar, quiet hours, widget, backup, on-device NLP.
+ * Metered (hosted GapGPT key): reminder-only cloud parse + smart TTS.
+ * Personal key: unlimited hosted features at the user's own cost.
  */
 object SubscriptionManager {
 
-    // TODO: replace CHANGE-ME with your deployed backend (Liara / Apps Script).
-    // Apps Script example: the same exec URL with ?path=status|request|verifyStore
     const val STATUS_URL = "CHANGE-ME"
     const val REQUEST_URL = "CHANGE-ME"
     const val VERIFY_STORE_URL = "CHANGE-ME"
@@ -49,7 +43,9 @@ object SubscriptionManager {
     }
 
     fun hasPersonalKey(context: Context): Boolean {
-        return PreferencesManager(context).aiApiKey.isNotBlank()
+        val prefs = PreferencesManager(context)
+        if (prefs.aiApiKey.isNotBlank()) return true
+        return prefs.getAPIKeys().any { it.isActive && !it.isAutoProvisioned && it.key.isNotBlank() }
     }
 
     fun remainingFreeLifetime(context: Context): Int {
@@ -57,9 +53,8 @@ object SubscriptionManager {
         return (FREE_AI_LIFETIME_LIMIT - used).coerceAtLeast(0)
     }
 
-    fun canUseAi(context: Context): Boolean {
+    fun canUseHostedAi(context: Context): Boolean {
         if (isPremium(context)) return true
-        if (hasPersonalKey(context)) return true
         val hasQuota = remainingFreeLifetime(context) > 0
         if (!hasQuota) {
             val prefs = PreferencesManager(context)
@@ -71,6 +66,11 @@ object SubscriptionManager {
         return hasQuota
     }
 
+    fun canUseAi(context: Context): Boolean {
+        if (hasPersonalKey(context)) return true
+        return canUseHostedAi(context)
+    }
+
     fun recordAiUsage(context: Context) {
         if (isPremium(context) || hasPersonalKey(context)) return
         val prefs = PreferencesManager(context)
@@ -78,11 +78,11 @@ object SubscriptionManager {
     }
 
     fun upgradeMessage(context: Context): String {
-        return "⚠️ سهمیه رایگان اولیه ($FREE_AI_LIFETIME_LIMIT پیام ابری) تمام شده است.\n" +
-            "یادآوری‌ها، سکوت شبانه و دستورهای روی دستگاه همچنان رایگان‌اند.\n" +
-            "برای گفتگوی آزاد ابری:\n" +
-            "• در تنظیمات کلید GapGPT / OpenAI خودت را بگذار\n" +
-            "• یا اشتراک پریمیوم را از صفحهٔ اشتراک فعال کن"
+        return "سهمیه رایگان ابری ($FREE_AI_LIFETIME_LIMIT بار) تمام شده است.\n" +
+            "یادآوری، دستور فارسی روی دستگاه، سکوت شبانه و ویجت رایگان می‌مانند.\n" +
+            "چت ابری و هشدار هوشمند گفتاری:\n" +
+            "• اشتراک پریمیوم از صفحه اشتراک\n" +
+            "• یا کلید GapGPT خودت در تنظیمات"
     }
 
     private fun appendParam(url: String, key: String, value: String): String {
@@ -148,8 +148,6 @@ object SubscriptionManager {
         purchaseToken: String
     ): Boolean = withContext(Dispatchers.IO) {
         if (!backendConfigured()) {
-            // Local grant so Cafe Bazaar / Myket product testing works before the
-            // verification server is deployed. Replace CHANGE-ME URLs before public release.
             android.util.Log.w("SubscriptionManager", "Backend URL is CHANGE-ME; granting premium locally")
             grantLocally(context, plan, channel)
             return@withContext true

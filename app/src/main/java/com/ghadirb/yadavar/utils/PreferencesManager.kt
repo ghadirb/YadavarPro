@@ -1,11 +1,15 @@
 package com.ghadirb.yadavar.utils
 
 import android.content.Context
+import com.ghadirb.yadavar.models.APIKey
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 
 enum class QuietMode { SILENT, PRIORITY, VIBRATE }
 
 class PreferencesManager(context: Context) {
     private val prefs = context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+    private val gson = Gson()
 
     var quietHoursEnabled: Boolean
         get() = prefs.getBoolean(KEY_QH_ENABLED, false)
@@ -54,6 +58,24 @@ class PreferencesManager(context: Context) {
     var aiModel: String
         get() = prefs.getString(KEY_AI_MODEL, "gpt-4o-mini").orEmpty()
         set(value) = prefs.edit().putString(KEY_AI_MODEL, value).apply()
+
+    fun getNotificationMode(): String = prefs.getString(KEY_NOTIF_MODE, "action").orEmpty().ifBlank { "action" }
+    fun setNotificationMode(mode: String) = prefs.edit().putString(KEY_NOTIF_MODE, mode).apply()
+
+    fun isBackgroundServiceEnabled(): Boolean = prefs.getBoolean(KEY_BG, true)
+    fun setBackgroundServiceEnabled(enabled: Boolean) = prefs.edit().putBoolean(KEY_BG, enabled).apply()
+
+    fun getAPIKeys(): List<APIKey> {
+        val raw = prefs.getString(KEY_API_KEYS, null) ?: return emptyList()
+        return runCatching {
+            val type = object : TypeToken<List<APIKey>>() {}.type
+            gson.fromJson<List<APIKey>>(raw, type).orEmpty()
+        }.getOrDefault(emptyList())
+    }
+
+    fun saveAPIKeys(keys: List<APIKey>) {
+        prefs.edit().putString(KEY_API_KEYS, gson.toJson(keys)).apply()
+    }
 
     fun formatMinutes(total: Int): String {
         val h = (total / 60) % 24
@@ -116,5 +138,8 @@ class PreferencesManager(context: Context) {
         private const val KEY_AI_KEY = "ai_api_key"
         private const val KEY_AI_URL = "ai_base_url"
         private const val KEY_AI_MODEL = "ai_model"
+        private const val KEY_API_KEYS = "api_keys_json"
+        private const val KEY_NOTIF_MODE = "notification_mode"
+        private const val KEY_BG = "background_service"
     }
 }

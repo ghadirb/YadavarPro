@@ -14,10 +14,8 @@ object RepeatCalculator {
             RepeatPattern.DAILY -> { cal.add(Calendar.DAY_OF_YEAR, 1); cal.timeInMillis }
             RepeatPattern.WEEKLY -> { cal.add(Calendar.WEEK_OF_YEAR, 1); cal.timeInMillis }
             RepeatPattern.MONTHLY -> { cal.add(Calendar.MONTH, 1); cal.timeInMillis }
-            // Yearly repeats (birthdays, anniversaries) advance by a Jalali year, not a
-            // naive Gregorian +365 days - see PersianCalendarHelper for why that matters.
             RepeatPattern.YEARLY -> PersianCalendarHelper.addJalaliYears(reminder.triggerTime, 1)
-            RepeatPattern.WEEKDAYS -> nextMatchingDay(cal) { it in Calendar.SATURDAY..Calendar.WEDNESDAY }
+            RepeatPattern.WEEKDAYS -> nextMatchingDay(cal) { isIranWorkday(it) }
             RepeatPattern.WEEKENDS -> nextMatchingDay(cal) { it == Calendar.THURSDAY || it == Calendar.FRIDAY }
             RepeatPattern.CUSTOM -> {
                 val days = reminder.customRepeatDays.split(",").mapNotNull { it.trim().toIntOrNull() }.toSet()
@@ -30,11 +28,19 @@ object RepeatCalculator {
         }
     }
 
-    // Iran's work week is Saturday-Wednesday (Thu/Fri weekend), unlike the Mon-Fri
-    // default most reminder apps assume - this is the whole point of having our own
-    // WEEKDAYS/WEEKENDS logic instead of reusing a generic library's.
+    /**
+     * Iran work week is Saturday–Wednesday. `Calendar.SATURDAY..WEDNESDAY` is an
+     * empty range (7..4) and would loop forever — never use that.
+     */
+    fun isIranWorkday(calendarDay: Int): Boolean =
+        calendarDay == Calendar.SATURDAY || calendarDay in Calendar.SUNDAY..Calendar.WEDNESDAY
+
     private fun nextMatchingDay(cal: Calendar, matches: (Int) -> Boolean): Long {
-        do { cal.add(Calendar.DAY_OF_YEAR, 1) } while (!matches(cal.get(Calendar.DAY_OF_WEEK)))
+        var guard = 0
+        do {
+            cal.add(Calendar.DAY_OF_YEAR, 1)
+            guard++
+        } while (!matches(cal.get(Calendar.DAY_OF_WEEK)) && guard < 10)
         return cal.timeInMillis
     }
 }

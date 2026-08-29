@@ -62,11 +62,12 @@
     <string name="nav_reminders">Reminders</string>
     <string name="nav_assistant">Assistant</string>
     <string name="assistant_title">Reminder assistant</string>
-    <string name="assistant_hint">Tomorrow 8am take medicine</string>
+    <string name="assistant_hint">6 and 42 minutes morning take medicine</string>
     <string name="assistant_send">Send</string>
     <string name="assistant_chip_today">Today</string>
-    <string name="assistant_chip_tomorrow">Tomorrow 9am</string>
+    <string name="assistant_chip_tomorrow">6:42 morning</string>
     <string name="assistant_chip_quiet">Quiet hours on</string>
+    <string name="assistant_chip_weekdays">Sat–Wed</string>
     <string name="assistant_chip_help">Help</string>
     <string name="assistant_api_title">Optional AI key</string>
     <string name="assistant_api_help">On-device parsing works without a key. A GapGPT / OpenAI-compatible key enables free-form chat. Never about finance.</string>
@@ -85,7 +86,7 @@
     <string name="subscription_free_title">Always free</string>
     <string name="subscription_free_body">Reminders, full-screen alerts, Jalali calendar, quiet hours, focus, widget and JSON backup — no subscription needed.</string>
     <string name="subscription_premium_title">Premium</string>
-    <string name="subscription_premium_body">Unlimited cloud assistant chat. On-device commands stay free. Personal API key also removes the limit.</string>
+    <string name="subscription_premium_body">Cloud chat is only for understanding and saving reminders, plus spoken smart alerts. On-device Persian commands stay free. A personal API key also removes the limit.</string>
     <string name="subscription_monthly">Monthly plan</string>
     <string name="subscription_yearly">Yearly plan (better value)</string>
     <string name="subscription_or_key">Or paste your own GapGPT / OpenAI key in Settings for unlimited chat at your own cost.</string>
@@ -109,5 +110,32 @@
     <string name="expiry_body">Your Yadavar Pro premium ends in %1$d day(s).</string>
     <string name="expired_title">Premium ended</string>
     <string name="expired_body">Cloud assistant is back on the free quota. Reminders stay unlimited.</string>
+    <string name="label_type">Reminder type</string>
+    <string name="label_priority">Priority</string>
+    <string name="label_alert">Alert type</string>
+    <string name="label_repeat">Repeat</string>
+    <string name="label_weekdays">Weekdays</string>
+    <string name="label_sound">Reminder sound — play then choose</string>
+    <string name="hint_interval_days">Every N days</string>
+    <string name="sound_default">Default phone alarm</string>
+    <string name="sound_from_device">Song picked from device</string>
+    <string name="pick_device_sound">Pick a song from the phone</string>
+    <string name="play_sound">Play</string>
+    <string name="sound_preview_failed">Could not play this sound</string>
+    <string name="alert_none">No alert</string>
+    <string name="alert_notification">Notification</string>
+    <string name="alert_full_screen">Full screen</string>
+    <string name="alert_smart">Smart (spoken)</string>
+    <string name="notif_mode_title">Notification style</string>
+    <string name="notif_mode_none">No notification</string>
+    <string name="notif_mode_simple">Simple (no buttons)</string>
+    <string name="notif_mode_action">With actions (done / snooze)</string>
+    <string name="bg_title">Run in background</string>
+    <string name="bg_enable">Keep the app alive so alarms stay reliable</string>
+    <string name="bg_running_title">Yadavar Pro is running in the background</string>
+    <string name="bg_running_body">Alarms and spoken alerts still fire with the screen off</string>
+    <string name="bg_channel_name">Background</string>
+    <string name="bg_channel_desc">Silent keep-alive for reminder alarms</string>
+    <string name="battery_hint">On Xiaomi and Huawei, turn off battery optimization for this app so alarms are not killed.</string>
 </resources>
 

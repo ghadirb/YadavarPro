@@ -1,66 +1,146 @@
 package com.ghadirb.yadavar.ui.reminders
 
+import android.content.Context
 import android.content.Intent
-import android.media.RingtoneManager
+import android.media.AudioAttributes
+import android.media.MediaPlayer
 import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
 import android.os.VibrationEffect
 import android.os.Vibrator
+import android.view.WindowManager
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.ghadirb.yadavar.database.AppDatabase
 import com.ghadirb.yadavar.databinding.ActivityFullScreenAlarmBinding
 import com.ghadirb.yadavar.receivers.ReminderActionReceiver
+import com.ghadirb.yadavar.receivers.SmartReminderTtsService
+import com.ghadirb.yadavar.utils.PreferencesManager
+import com.ghadirb.yadavar.utils.QuietHoursManager
+import com.ghadirb.yadavar.utils.ReminderSound
 import kotlinx.coroutines.launch
 
 class FullScreenAlarmActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityFullScreenAlarmBinding
+    private var mediaPlayer: MediaPlayer? = null
+    private var wakeLock: PowerManager.WakeLock? = null
+    private var reminderId: Long = -1
+    private var isSmart = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        window.addFlags(
+            WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON or
+                WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
+                WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON or
+                WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD
+        )
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            setShowWhenLocked(true)
+            setTurnScreenOn(true)
+        }
         binding = ActivityFullScreenAlarmBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        val reminderId = intent.getLongExtra("reminder_id", -1)
+        reminderId = intent.getLongExtra("reminder_id", -1)
+        val titleExtra = intent.getStringExtra("reminder_title")
+        val descExtra = intent.getStringExtra("reminder_description")
+        isSmart = intent.getStringExtra("alert_type") == "SMART"
+        binding.textTitle.text = titleExtra.orEmpty()
+        binding.textDescription.text = descExtra.orEmpty()
+        binding.textHint.text = if (isSmart) getString(com.ghadirb.yadavar.R.string.alert_smart) else getString(com.ghadirb.yadavar.R.string.alert_full_screen)
+        binding.textHint.visibility = android.view.View.VISIBLE
+
         lifecycleScope.launch {
             val reminder = AppDatabase.getInstance(applicationContext).reminderDao().getById(reminderId)
-            binding.textTitle.text = reminder?.title.orEmpty()
-            binding.textDescription.text = reminder?.description.orEmpty()
+            if (reminder != null) {
+                binding.textTitle.text = reminder.title
+                binding.textDescription.text = reminder.description
+                val mute = QuietHoursManager.shouldMuteSound(PreferencesManager(this@FullScreenAlarmActivity), reminder)
+                if (!isSmart && !mute) playSound(reminder.soundUri)
+                if (mute && QuietHoursManager.vibrateOnly(PreferencesManager(this@FullScreenAlarmActivity), reminder)) {
+                    vibrate()
+                } else if (!mute) {
+                    vibrate()
+                }
+            } else if (!isSmart) {
+                playSound(intent.getStringExtra("sound_uri"))
+                vibrate()
+            }
         }
 
-        playAlarmFeedback()
+        val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
+        @Suppress("DEPRECATION")
+        wakeLock = pm.newWakeLock(
+            PowerManager.FULL_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP or PowerManager.ON_AFTER_RELEASE,
+            "Yadavar:Alarm"
+        )
+        runCatching { wakeLock?.acquire(10 * 60 * 1000L) }
 
         binding.buttonDismiss.setOnClickListener {
-            sendActionBroadcast(reminderId, ReminderActionReceiver.ACTION_DONE)
+            sendActionBroadcast(ReminderActionReceiver.ACTION_DONE)
             finish()
         }
         binding.buttonSnooze.setOnClickListener {
-            sendActionBroadcast(reminderId, ReminderActionReceiver.ACTION_SNOOZE)
+            sendActionBroadcast(ReminderActionReceiver.ACTION_SNOOZE)
             finish()
         }
     }
 
-    private fun sendActionBroadcast(reminderId: Long, action: String) {
+    private fun playSound(soundValue: String?) {
+        try {
+            val uri = ReminderSound.toUri(this, soundValue) ?: return
+            mediaPlayer = MediaPlayer().apply {
+                setAudioAttributes(
+                    AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_ALARM)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                        .build()
+                )
+                setDataSource(this@FullScreenAlarmActivity, uri)
+                isLooping = true
+                prepare()
+                start()
+            }
+        } catch (_: Exception) {
+        }
+    }
+
+    private fun vibrate() {
+        val vibrator = getSystemService(Vibrator::class.java) ?: return
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            vibrator.vibrate(VibrationEffect.createWaveform(longArrayOf(0, 500, 500, 500), 0))
+        }
+    }
+
+    private fun sendActionBroadcast(action: String) {
+        stopAlarm()
         sendBroadcast(Intent(this, ReminderActionReceiver::class.java).apply {
             this.action = action
             putExtra("reminder_id", reminderId)
         })
     }
 
-    private fun playAlarmFeedback() {
-        try {
-            RingtoneManager.getRingtone(this, RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)).play()
-        } catch (_: Exception) { /* device has no alarm sound configured, ignore */ }
-
-        val vibrator = getSystemService(Vibrator::class.java)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            vibrator?.vibrate(VibrationEffect.createWaveform(longArrayOf(0, 500, 500), 0))
+    private fun stopAlarm() {
+        runCatching {
+            mediaPlayer?.apply { if (isPlaying) stop(); release() }
+            mediaPlayer = null
         }
+        runCatching { if (wakeLock?.isHeld == true) wakeLock?.release() }
+        wakeLock = null
+        getSystemService(Vibrator::class.java)?.cancel()
+        if (reminderId > 0) SmartReminderTtsService.stop(reminderId)
+    }
+
+    @Deprecated("Deprecated in Java")
+    override fun onBackPressed() {
+        // Must dismiss or snooze.
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        getSystemService(Vibrator::class.java)?.cancel()
+        stopAlarm()
     }
 }
