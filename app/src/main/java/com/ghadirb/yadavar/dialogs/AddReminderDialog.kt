@@ -15,6 +15,7 @@ import com.ghadirb.yadavar.R
 import com.ghadirb.yadavar.databinding.DialogAddReminderBinding
 import com.ghadirb.yadavar.database.*
 import com.ghadirb.yadavar.ui.reminders.RemindersViewModel
+import com.ghadirb.yadavar.assistant.ReminderNlp
 import com.ghadirb.yadavar.utils.EnumLabels
 import com.ghadirb.yadavar.utils.LabeledOption
 import com.ghadirb.yadavar.utils.PersianCalendarHelper
