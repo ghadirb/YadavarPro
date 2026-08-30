@@ -15,6 +15,10 @@
     <string name="empty_state">هنوز یادآوری‌ای ثبت نشده</string>
     <string name="widget_no_upcoming">یادآوری نزدیکی وجود ندارد</string>
     <string name="settings_title">تنظیمات</string>
+    <string name="settings_tab_notifications">اعلان و سکوت</string>
+    <string name="settings_tab_assistant">دستیار</string>
+    <string name="settings_tab_backup">پشتیبان‌گیری</string>
+    <string name="settings_tab_subscription">اشتراک</string>
     <string name="add_reminder">یادآوری جدید</string>
     <string name="hint_title">عنوان</string>
     <string name="hint_description">توضیحات</string>
@@ -52,6 +56,7 @@
     <string name="focus_on_banner">حالت تمرکز روشن است — فقط یادآوری بحرانی صدا می‌دهد</string>
     <string name="group_by_category">گروه‌بندی لیست بر اساس دسته</string>
     <string name="backup_title">پشتیبان</string>
+    <string name="backup_hint">همه‌ی یادآوری‌ها رو توی یه فایل JSON ذخیره کن، یا روی گوشی جدید برشون گردون.</string>
     <string name="backup_export">خروجی JSON</string>
     <string name="backup_import">بازیابی از JSON</string>
     <string name="backup_exported">پشتیبان ذخیره شد</string>

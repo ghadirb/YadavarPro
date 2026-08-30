@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/quiet_hours_title"
+            android:textStyle="bold"
+            android:textColor="@color/text_primary"
+            android:textSize="16sp" />
+
+        <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/switch_quiet_hours"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/quiet_hours_enable" />
+
+        <Button
+            android:id="@+id/button_start"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp" />
+
+        <Button
+            android:id="@+id/button_end"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp" />
+
+        <RadioGroup
+            android:id="@+id/radio_quiet_mode"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp">
+
+            <RadioButton
+                android:id="@+id/radio_silent"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/quiet_mode_silent" />
+
+            <RadioButton
+                android:id="@+id/radio_priority"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/quiet_mode_priority" />
+
+            <RadioButton
+                android:id="@+id/radio_vibrate"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/quiet_mode_vibrate" />
+        </RadioGroup>
+
+        <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/switch_critical"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/allow_critical" />
+
+        <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/switch_announce"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/quiet_announce" />
+
+        <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/switch_system_dnd"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/apply_system_dnd" />
+
+        <Button
+            android:id="@+id/button_dnd_access"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/grant_dnd_access" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/focus_title"
+            android:textStyle="bold"
+            android:textColor="@color/text_primary"
+            android:textSize="16sp"
+            android:layout_marginTop="20dp" />
+
+        <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/switch_focus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/focus_enable" />
+
+        <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/switch_group"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/group_by_category" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/notif_mode_title"
+            android:textStyle="bold"
+            android:textColor="@color/text_primary"
+            android:textSize="16sp"
+            android:layout_marginTop="20dp" />
+
+        <RadioGroup
+            android:id="@+id/radio_notif_mode"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+            <RadioButton
+                android:id="@+id/radio_notif_none"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/notif_mode_none" />
+            <RadioButton
+                android:id="@+id/radio_notif_simple"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/notif_mode_simple" />
+            <RadioButton
+                android:id="@+id/radio_notif_action"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/notif_mode_action" />
+        </RadioGroup>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/bg_title"
+            android:textStyle="bold"
+            android:textColor="@color/text_primary"
+            android:textSize="16sp"
+            android:layout_marginTop="20dp" />
+
+        <com.google.android.material.switchmaterial.SwitchMaterial
+            android:id="@+id/switch_background"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/bg_enable" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/battery_hint"
+            android:textColor="@color/text_secondary"
+            android:textSize="13sp"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="8dp" />
+    </LinearLayout>
+</ScrollView>

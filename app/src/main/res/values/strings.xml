@@ -15,6 +15,10 @@
     <string name="empty_state">No reminders yet</string>
     <string name="widget_no_upcoming">No upcoming reminders</string>
     <string name="settings_title">Settings</string>
+    <string name="settings_tab_notifications">Alerts &amp; quiet hours</string>
+    <string name="settings_tab_assistant">Assistant</string>
+    <string name="settings_tab_backup">Backup</string>
+    <string name="settings_tab_subscription">Subscription</string>
     <string name="add_reminder">Add reminder</string>
     <string name="hint_title">Title</string>
     <string name="hint_description">Notes</string>
@@ -52,6 +56,7 @@
     <string name="focus_on_banner">Focus mode is on — only critical reminders ring</string>
     <string name="group_by_category">Group list by category</string>
     <string name="backup_title">Backup</string>
+    <string name="backup_hint">Save all reminders to a JSON file, or restore them on a new device.</string>
     <string name="backup_export">Export JSON backup</string>
     <string name="backup_import">Restore from JSON</string>
     <string name="backup_exported">Backup saved</string>
