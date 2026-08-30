@@ -24,6 +24,10 @@ data class ReminderEntity(
     /** Used when repeatPattern is CUSTOM_INTERVAL: run again after this many calendar days
      *  (ported from Maliar-Pro's codex/reminder-finalize-v2 "interval reminders" feature). */
     val repeatIntervalDays: Int = 0,
+    /** Also CUSTOM_INTERVAL: sub-day granularity, e.g. "every 8 hours" = 480. Added on top of
+     *  repeatIntervalDays (rather than replacing it) so the two can combine if ever needed;
+     *  RepeatCalculator adds both to the previous trigger time. */
+    val repeatIntervalMinutes: Int = 0,
     val customRepeatDays: String = "", // comma-separated weekday indices: "0,1,2,3,4,5,6"
 
     // Location-based reminders

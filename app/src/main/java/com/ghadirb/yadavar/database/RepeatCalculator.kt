@@ -22,8 +22,12 @@ object RepeatCalculator {
                 if (days.isEmpty()) null else nextMatchingDay(cal) { (it - Calendar.SUNDAY) in days }
             }
             RepeatPattern.CUSTOM_INTERVAL -> {
-                if (reminder.repeatIntervalDays <= 0) null
-                else { cal.add(Calendar.DAY_OF_YEAR, reminder.repeatIntervalDays); cal.timeInMillis }
+                if (reminder.repeatIntervalDays <= 0 && reminder.repeatIntervalMinutes <= 0) null
+                else {
+                    if (reminder.repeatIntervalDays > 0) cal.add(Calendar.DAY_OF_YEAR, reminder.repeatIntervalDays)
+                    if (reminder.repeatIntervalMinutes > 0) cal.add(Calendar.MINUTE, reminder.repeatIntervalMinutes)
+                    cal.timeInMillis
+                }
             }
         }
     }

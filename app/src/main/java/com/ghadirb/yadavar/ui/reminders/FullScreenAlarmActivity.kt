@@ -37,6 +37,12 @@ class FullScreenAlarmActivity : AppCompatActivity() {
      *  discover or trust the gesture. */
     private val gestureDetector by lazy {
         GestureDetector(this, object : GestureDetector.SimpleOnGestureListener() {
+            // Returning true here is required: SimpleOnGestureListener.onDown() defaults to
+            // false, which tells Android "I'm not interested in this touch," so the system
+            // never delivers the follow-up MOVE/UP events and onFling() never fires. This was
+            // the actual bug - the swipe hint text showed but the gesture silently did nothing.
+            override fun onDown(e: MotionEvent): Boolean = true
+
             override fun onFling(
                 e1: MotionEvent?,
                 e2: MotionEvent,

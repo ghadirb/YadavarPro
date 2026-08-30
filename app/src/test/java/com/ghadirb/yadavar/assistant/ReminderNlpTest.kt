@@ -62,4 +62,32 @@ class ReminderNlpTest {
         assertTrue(ReminderNlp.parse("یه جوک بگو") is AssistantIntent.OffTopic)
         assertTrue(ReminderNlp.parse("قیمت دلار چنده") is AssistantIntent.OffTopic)
     }
+
+    @Test
+    fun everyEightHoursStartsCountingFromNow() {
+        val before = System.currentTimeMillis()
+        val intent = ReminderNlp.parse("از الان هر ۸ ساعت یادآوری خوردن دارو کن") as AssistantIntent.Create
+        val after = System.currentTimeMillis()
+        assertEquals(RepeatPattern.CUSTOM_INTERVAL, intent.repeat)
+        assertEquals(480, intent.intervalMinutes)
+        // trigger should land ~8h after "now" at parse time, not at some fixed clock hour
+        assertTrue(intent.triggerAt in (before + 480 * 60_000 - 5_000)..(after + 480 * 60_000 + 5_000))
+        assertEquals("دارو", intent.category)
+    }
+
+    @Test
+    fun everyThirtyMinutesIsRecognized() {
+        val intent = ReminderNlp.parse("هر ۳۰ دقیقه آب بخور یادآوری کن") as AssistantIntent.Create
+        assertEquals(RepeatPattern.CUSTOM_INTERVAL, intent.repeat)
+        assertEquals(30, intent.intervalMinutes)
+    }
+
+    @Test
+    fun withNoRealTimeSignalItDefersInsteadOfGuessing() {
+        // No clock time, no weekday, no "tomorrow"/"tonight", no interval - previously this
+        // silently defaulted to a fixed 9:00 and looked like a confident answer. It should
+        // now decline locally so the caller can fall back to asking the cloud model.
+        val intent = ReminderNlp.parse("یادآوری برای فلان کار مبهم")
+        assertTrue(intent is AssistantIntent.ReminderQuestion)
+    }
 }

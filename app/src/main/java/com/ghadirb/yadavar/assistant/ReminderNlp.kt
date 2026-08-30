@@ -16,6 +16,7 @@ sealed class AssistantIntent {
         val category: String = "",
         val priority: Priority = Priority.MEDIUM,
         val intervalDays: Int = 0,
+        val intervalMinutes: Int = 0,
         val customDays: String = "",
         val alertType: String = "NOTIFICATION"
     ) : AssistantIntent()
@@ -139,53 +140,82 @@ object ReminderNlp {
             )
         if (!looksLikeCreate) return null
 
-        val resolved = time ?: ParsedTime(9, 0, false)
-        val cal = Calendar.getInstance()
-        var hour = resolved.hour
-        var minute = resolved.minute
+        // "هر ۸ ساعت" / "هر نیم ساعت" (every N hours/minutes) is a distinct pattern from
+        // "ساعت ۸" (at clock-hour 8) - distinguished by the "هر" prefix coming before the
+        // number, so it can't be confused with a specific time-of-day.
+        val worded = replaceNumberWords(n)
+        val hourInterval = Regex("""هر\s*(\d{1,3})\s*ساعت""").find(worded)?.groupValues?.get(1)?.toIntOrNull() ?: 0
+        val minuteInterval = if (hourInterval == 0) {
+            Regex("""هر\s*(\d{1,3})\s*دقیقه""").find(worded)?.groupValues?.get(1)?.toIntOrNull() ?: 0
+        } else 0
+        val subDayIntervalMinutes = hourInterval * 60 + minuteInterval
+        val hasSubDayInterval = subDayIntervalMinutes > 0
 
-        when {
-            n.contains("امشب") && !resolved.found -> { hour = 21 }
-            n.contains("ظهر") && resolved.found && hour < 12 -> hour += 12
-            n.contains("عصر") && resolved.found && hour in 1..11 -> hour += 12
-            n.contains("شب") && resolved.found && hour in 1..11 && !n.contains("امشب") -> hour += 12
-            n.contains("صبح") && resolved.found && hour == 12 -> hour = 0
-        }
-        hour = hour.coerceIn(0, 23)
-        minute = minute.coerceIn(0, 59)
-
+        val dayInterval = Regex("""هر\s*(\d{1,2})\s*روز""").find(n)?.groupValues?.get(1)?.toIntOrNull() ?: 0
         val dateShift = when {
             n.contains("پس فردا") || n.contains("پسفردا") -> 2
             n.contains("فردا") -> 1
             else -> 0
         }
-        if (weekdays.isEmpty()) {
-            cal.add(Calendar.DAY_OF_YEAR, dateShift)
-        } else {
-            moveToNextMatchingDay(cal, weekdays)
-        }
 
-        cal.set(Calendar.HOUR_OF_DAY, hour)
-        cal.set(Calendar.MINUTE, minute)
-        cal.set(Calendar.SECOND, 0)
-        cal.set(Calendar.MILLISECOND, 0)
-        if (cal.timeInMillis < System.currentTimeMillis() - 30_000) {
-            if (weekdays.isNotEmpty()) {
-                cal.add(Calendar.DAY_OF_YEAR, 1)
-                moveToNextMatchingDay(cal, weekdays, includeToday = true)
-                cal.set(Calendar.HOUR_OF_DAY, hour)
-                cal.set(Calendar.MINUTE, minute)
+        // If nothing here actually anchors a time (no clock time, no weekday, no "tomorrow"/
+        // "tonight", no day/hour/minute interval), silently defaulting to 9:00 would just be
+        // a guess presented as a fact. Better to admit defeat here so parse() falls through to
+        // looksLikeReminderTalk() -> ReminderQuestion -> the cloud AI fallback, which can ask
+        // a genuinely ambiguous phrase to be clarified instead of committing to a wrong time.
+        val hasTemporalSignal = time?.found == true || weekdays.isNotEmpty() || dateShift > 0 ||
+            n.contains("امشب") || dayInterval > 0 || hasSubDayInterval
+        if (!hasTemporalSignal) return null
+
+        val cal = Calendar.getInstance()
+
+        if (hasSubDayInterval && time?.found != true) {
+            // "از الان هر ۸ ساعت ..." - no explicit clock time was given alongside the
+            // interval, so the natural reading is "starting now, every N hours/minutes".
+            cal.add(Calendar.MINUTE, subDayIntervalMinutes)
+            cal.set(Calendar.SECOND, 0)
+            cal.set(Calendar.MILLISECOND, 0)
+        } else {
+            val resolved = time ?: ParsedTime(9, 0, false)
+            var hour = resolved.hour
+            var minute = resolved.minute
+
+            when {
+                n.contains("امشب") && !resolved.found -> { hour = 21 }
+                n.contains("ظهر") && resolved.found && hour < 12 -> hour += 12
+                n.contains("عصر") && resolved.found && hour in 1..11 -> hour += 12
+                n.contains("شب") && resolved.found && hour in 1..11 && !n.contains("امشب") -> hour += 12
+                n.contains("صبح") && resolved.found && hour == 12 -> hour = 0
+            }
+            hour = hour.coerceIn(0, 23)
+            minute = minute.coerceIn(0, 59)
+
+            if (weekdays.isEmpty()) {
+                cal.add(Calendar.DAY_OF_YEAR, dateShift)
             } else {
-                cal.add(Calendar.DAY_OF_YEAR, 1)
+                moveToNextMatchingDay(cal, weekdays)
+            }
+
+            cal.set(Calendar.HOUR_OF_DAY, hour)
+            cal.set(Calendar.MINUTE, minute)
+            cal.set(Calendar.SECOND, 0)
+            cal.set(Calendar.MILLISECOND, 0)
+            if (cal.timeInMillis < System.currentTimeMillis() - 30_000) {
+                if (weekdays.isNotEmpty()) {
+                    cal.add(Calendar.DAY_OF_YEAR, 1)
+                    moveToNextMatchingDay(cal, weekdays, includeToday = true)
+                    cal.set(Calendar.HOUR_OF_DAY, hour)
+                    cal.set(Calendar.MINUTE, minute)
+                } else {
+                    cal.add(Calendar.DAY_OF_YEAR, 1)
+                }
             }
         }
-
-        val interval = Regex("""هر\s*(\d{1,2})\s*روز""").find(n)?.groupValues?.get(1)?.toIntOrNull() ?: 0
 
         val workWeek = setOf(6, 0, 1, 2, 3)
         val weekend = setOf(4, 5)
         val repeat = when {
-            interval > 0 -> RepeatPattern.CUSTOM_INTERVAL
+            hasSubDayInterval || dayInterval > 0 -> RepeatPattern.CUSTOM_INTERVAL
             n.contains("روزهای کاری") || n.contains("روز کاری") -> RepeatPattern.WEEKDAYS
             weekdays == workWeek -> RepeatPattern.WEEKDAYS
             n.contains("آخر هفته") || n.contains("آخرهفته") || weekdays == weekend -> RepeatPattern.WEEKENDS
@@ -197,16 +227,7 @@ object ReminderNlp {
             else -> RepeatPattern.ONCE
         }
 
-        val category = CategoryCatalog.defaults.firstOrNull { n.contains(it.name) }?.name
-            ?: when {
-                n.contains("قرص") || n.contains("دارو") -> "دارو"
-                n.contains("ورزش") || n.contains("دکتر") || n.contains("پزشک") -> "سلامت"
-                n.contains("خرید") || n.contains("فروشگاه") -> "خرید"
-                n.contains("قبض") -> "قبض"
-                n.contains("جلسه") || n.contains("اداره") || n.contains("کار") -> "کار"
-                n.contains("مهمانی") || n.contains("تولد") -> "مهمانی"
-                else -> "عمومی"
-            }
+        val category = inferCategory(n)
 
         val priority = when {
             n.contains("فوری") || n.contains("بحرانی") || n.contains("حتما") -> Priority.CRITICAL
@@ -227,10 +248,28 @@ object ReminderNlp {
             repeat = repeat,
             category = category,
             priority = priority,
-            intervalDays = interval,
+            intervalDays = dayInterval,
+            intervalMinutes = subDayIntervalMinutes,
             customDays = weekdays.sorted().joinToString(","),
             alertType = alertType
         )
+    }
+
+    /** Best-effort category guess from free text - used both by the assistant parser and by
+     *  the manual Add Reminder dialog to auto-select a category as the person types a title,
+     *  without ever overriding a category they've picked by hand. */
+    fun inferCategory(text: String): String {
+        val n = normalize(text)
+        return CategoryCatalog.defaults.firstOrNull { n.contains(it.name) }?.name
+            ?: when {
+                n.contains("قرص") || n.contains("دارو") -> "دارو"
+                n.contains("ورزش") || n.contains("دکتر") || n.contains("پزشک") -> "سلامت"
+                n.contains("خرید") || n.contains("فروشگاه") -> "خرید"
+                n.contains("قبض") -> "قبض"
+                n.contains("جلسه") || n.contains("اداره") || n.contains("کار") -> "کار"
+                n.contains("مهمانی") || n.contains("تولد") -> "مهمانی"
+                else -> "عمومی"
+            }
     }
 
     internal fun parseTime(n: String): ParsedTime? {
@@ -351,9 +390,11 @@ object ReminderNlp {
         }
         t = t.replace(Regex("""ساعت\s*\d{1,2}(\s*و\s*\d{1,2}\s*(دقیقه)?)?([:\.]\d{2})?"""), " ")
         t = t.replace(Regex("""\d{1,2}\s*و\s*\d{1,2}\s*(دقیقه)?"""), " ")
-        t = t.replace(Regex("""(پس\s*فردا|فردا|امروز|امشب|هر روز|هرروز|روزانه|هر هفته|هفتگی|هر ماه|ماهانه|صبح|ظهر|عصر|شب)"""), " ")
+        t = t.replace(Regex("""هر\s*\d{1,3}\s*(ساعت|دقیقه|روز)"""), " ")
+        t = t.replace(Regex("""(پس\s*فردا|فردا|امروز|امشب|هر روز|هرروز|روزانه|هر هفته|هفتگی|هر ماه|ماهانه|صبح|ظهر|عصر|شب|از الان)"""), " ")
         t = t.replace(Regex("""(از\s*)?(شنبه|یکشنبه|دوشنبه|سه‌شنبه|سه شنبه|چهارشنبه|پنجشنبه|جمعه|تا)"""), " ")
         t = t.replace(Regex("""\s+"""), " ").trim()
+        t = t.removeSuffix(" کن").trim()
         return t.ifBlank { original.trim() }
     }
 

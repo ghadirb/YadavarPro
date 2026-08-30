@@ -166,11 +166,18 @@ class AssistantViewModel(app: Application) : AndroidViewModel(app) {
             reminderType = if (intent.repeat.name == "ONCE") ReminderType.SIMPLE.name else ReminderType.RECURRING.name,
             alertType = intent.alertType.ifBlank { AlertType.NOTIFICATION.name },
             customRepeatDays = intent.customDays,
-            repeatIntervalDays = intent.intervalDays
+            repeatIntervalDays = intent.intervalDays,
+            repeatIntervalMinutes = intent.intervalMinutes
         )
         repo.save(reminder)
         val days = if (intent.customDays.isNotBlank()) "\nروزها: ${ReminderNlp.weekdayNames(intent.customDays)}" else ""
-        val repeatLabel = EnumLabels.repeat(intent.repeat.name)
+        val repeatLabel = when {
+            intent.intervalMinutes >= 60 && intent.intervalMinutes % 60 == 0 ->
+                "هر ${intent.intervalMinutes / 60} ساعت یک‌بار"
+            intent.intervalMinutes > 0 -> "هر ${intent.intervalMinutes} دقیقه یک‌بار"
+            intent.intervalDays > 0 -> "هر ${intent.intervalDays} روز یک‌بار"
+            else -> EnumLabels.repeat(intent.repeat.name)
+        }
         appendBot("ثبت شد: «${intent.title}»\n${ReminderNlp.formatWhen(intent.triggerAt)}\nتکرار: $repeatLabel$days\nدسته: ${intent.category.ifBlank { "عمومی" }}")
     }
 

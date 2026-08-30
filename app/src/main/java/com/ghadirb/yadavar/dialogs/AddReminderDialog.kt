@@ -32,6 +32,7 @@ class AddReminderDialog : DialogFragment() {
     private val calendar = Calendar.getInstance()
     private var customSoundUri: String? = null
     private var selectedBuiltInSound: String = ReminderSound.DEFAULT_ALARM
+    private var categoryTouchedByUser = false
 
     private val pickAudio = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri == null) return@registerForActivityResult
@@ -82,6 +83,28 @@ class AddReminderDialog : DialogFragment() {
             }
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
+
+        // Auto-pick a category from the title as the person types, using the same keyword
+        // rules the voice assistant uses (ReminderNlp.inferCategory) - but only until they
+        // touch the category spinner themselves. A real touch (not a programmatic
+        // setSelection, which never dispatches touch events) permanently hands control back
+        // to them for the rest of this dialog's lifetime.
+        binding.spinnerCategory.setOnTouchListener { _, _ -> categoryTouchedByUser = true; false }
+        binding.editTitle.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: android.text.Editable?) {
+                if (categoryTouchedByUser) return
+                val title = s?.toString().orEmpty()
+                if (title.isBlank()) return
+                val guess = ReminderNlp.inferCategory(title)
+                val names = CategoryCatalog.allNames()
+                val idx = names.indexOf(guess)
+                if (idx >= 0 && binding.spinnerCategory.selectedItemPosition != idx) {
+                    binding.spinnerCategory.setSelection(idx)
+                }
+            }
+        })
 
         editingId = arguments?.getLong(ARG_EDIT_ID) ?: 0L
         if (editingId != 0L) {
@@ -138,6 +161,7 @@ class AddReminderDialog : DialogFragment() {
         selectOption(binding.spinnerAlert, reminder.alertType)
         val catIndex = CategoryCatalog.allNames().indexOf(reminder.category)
         if (catIndex >= 0) binding.spinnerCategory.setSelection(catIndex)
+        categoryTouchedByUser = true
         if (reminder.repeatIntervalDays > 0) binding.editInterval.setText(reminder.repeatIntervalDays.toString())
         val selectedDays = reminder.customRepeatDays.split(",").map { it.trim() }.toSet()
         for (i in 0 until binding.weekdayChips.childCount) {
