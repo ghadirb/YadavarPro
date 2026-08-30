@@ -8,6 +8,17 @@ fun projectSetting(name: String): String =
 fun buildConfigString(value: String): String =
     "\"${value.replace("\\", "\\\\").replace("\"", "\\\"")}\""
 
+// Dedicated Google Apps Script Web App for the AI proxy (chat/STT/TTS). Deliberately a
+// SEPARATE deployment from Maliar-Pro's - sharing one would mix the two apps' AI quotas
+// and billing. The real provider key never ships in the APK; only this endpoint URL does,
+// which is not a secret (same as any other API base URL). Until you deploy your own copy
+// of server/apps-script/Code.gs and paste its /exec URL here (or pass -PAI_BACKEND_URL=...
+// / set the AI_BACKEND_URL env var in CI), this stays "CHANGE-ME" and AIBackendClient
+// simply returns null - hosted AI/STT/TTS silently unavailable, personal keys still work.
+val aiBackendUrl = projectSetting("AI_BACKEND_URL").ifBlank {
+    "https://script.google.com/macros/s/AKfycbz9aQcHMVqlcqc3qynKdDWjh-rFGUAbRs0-1OrGZhX4JiMGRBwRcA7REDpX7FKy0OP8jw/exec"
+}
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -41,6 +52,7 @@ android {
         targetSdk = 34
         versionCode = 5
         versionName = "1.4.0"
+        buildConfigField("String", "AI_BACKEND_URL", buildConfigString(aiBackendUrl))
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

@@ -9,6 +9,7 @@ import com.ghadirb.yadavar.database.ReminderEntity
 import com.ghadirb.yadavar.database.ReminderRepository
 import com.ghadirb.yadavar.database.ReminderType
 import com.ghadirb.yadavar.database.RepeatPattern
+import com.ghadirb.yadavar.utils.AIBackendClient
 import com.ghadirb.yadavar.utils.AIHelper
 import com.ghadirb.yadavar.utils.EnumLabels
 import com.ghadirb.yadavar.utils.PreferencesManager
@@ -72,11 +73,28 @@ class AssistantViewModel(app: Application) : AndroidViewModel(app) {
             return
         }
         val context = buildContext()
-        val raw = AIHelper.generateText(app, PARSE_SYSTEM, "وضعیت:\n$context\n\nپیام:\n$text")
+        val systemPrompt = PARSE_SYSTEM
+        val userPrompt = "وضعیت:\n$context\n\nپیام:\n$text"
+        // Personal key (GapGPT/Liara typed into Settings -> دستیار) always wins if present -
+        // calls the provider directly, unmetered. Otherwise this is the shared/free tier,
+        // which goes through AIBackendClient - a server-side proxy (server/apps-script/Code.gs)
+        // that holds the real provider key in Google Apps Script's Script Properties and never
+        // ships it in the APK. See AutoProvisioningManager for why this replaced a local
+        // downloaded-key flow.
+        val raw = if (SubscriptionManager.hasPersonalKey(app)) {
+            AIHelper.generateText(app, systemPrompt, userPrompt)
+        } else {
+            val messages = org.json.JSONArray().apply {
+                put(JSONObject().put("role", "system").put("content", systemPrompt))
+                put(JSONObject().put("role", "user").put("content", userPrompt))
+            }
+            AIBackendClient.chat(app, messages)
+        }
         if (raw.isNullOrBlank()) {
             appendBot("نتوانستم آنلاین تحلیل کنم. مثال: «فردا ساعت ۷ و ۱۵ دقیقه جلسه».")
             return
         }
+        SubscriptionManager.recordAiUsage(app)
         val json = extractJson(raw)
         if (json != null) {
             val action = json.optString("action")

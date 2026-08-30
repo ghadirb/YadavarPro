@@ -1,4 +1,4 @@
-// Google Apps Script version of the Yadavar Pro billing backend - a free, no-hosting-
+// Google Apps Script version of the Maliar Pro billing backend - a free, no-hosting-
 // needed alternative to the Node.js server in /server. Uses PropertiesService as a tiny
 // key-value store (no Google Sheet needed) and UrlFetchApp to call the gateway's API.
 //
@@ -35,6 +35,12 @@
 //      APP_PACKAGE_NAME     = com.ghadirb.yadavar
 //      BAZAAR_API_TOKEN     = token from Bazaar developer dashboard
 //      MYKET_ACCESS_TOKEN   = token from Myket developer dashboard
+//      -- optional AI proxy --
+//      AI_PROVIDER          = gapgpt (or liara)
+//      GAPGPT_API_KEY       = provider key (Script Property only)
+//      LIARA_API_KEY        = provider key (Script Property only)
+//      AI_MODEL             = gpt-4o-mini
+//      AI_DAILY_LIMIT       = 10
 // 4. Deploy -> New deployment -> type: "Web app".
 //      Execute as: Me
 //      Who has access: Anyone
@@ -163,7 +169,7 @@ function doPost(e) {
 }
 
 function routeRequest_(e) {
-  const params = (e && e.parameter) || {};
+  const params = Object.assign({}, (e && e.parameter) || {}, parseJsonBody_(e));
   const path = params.path;
 
   if (path === 'status') return handleStatus_(params);
@@ -171,8 +177,166 @@ function routeRequest_(e) {
   if (path === 'callback') return handleCallback_(params);
   if (path === 'paypingCallback') return handleCallbackPayping_(params);
   if (path === 'verifyStore') return handleVerifyStore_(params);
+  if (path === 'aiChat') return handleAiChat_(params);
+  if (path === 'aiStt') return handleAiStt_(params);
+  if (path === 'aiTts') return handleAiTts_(params);
 
   return jsonOutput_({ error: 'unknown_path' });
+}
+
+function parseJsonBody_(e) {
+  try {
+    const raw = e && e.postData && e.postData.contents;
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch (err) {
+    return {};
+  }
+}
+
+function aiConfig_() {
+  const provider = getSetting_('AI_PROVIDER', 'gapgpt').toLowerCase();
+  const isLiara = provider === 'liara';
+  return {
+    provider: provider,
+    key: getSetting_(isLiara ? 'LIARA_API_KEY' : 'GAPGPT_API_KEY', ''),
+    baseUrl: getSetting_(
+      isLiara ? 'LIARA_BASE_URL' : 'GAPGPT_BASE_URL',
+      isLiara ? 'https://ai.liara.ir/api/69467b6ba99a2016cac892e1/v1' : 'https://api.gapgpt.app/v1'
+    ),
+    model: getSetting_('AI_MODEL', isLiara ? 'openai/gpt-4o-mini' : 'gpt-4o-mini')
+  };
+}
+
+function aiLimit_() {
+  return Math.max(1, parseInt(getSetting_('AI_DAILY_LIMIT', '10'), 10));
+}
+
+function aiUsageKey_(deviceId) {
+  const day = Utilities.formatDate(new Date(), Session.getScriptTimeZone() || 'UTC', 'yyyyMMdd');
+  const digest = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, String(deviceId));
+  const safe = Utilities.base64EncodeWebSafe(digest).replace(/=+$/, '');
+  return 'ai_usage_' + day + '_' + safe;
+}
+
+function consumeAiQuota_(deviceId) {
+  if (!deviceId || String(deviceId).length > 128) return false;
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const props = PropertiesService.getScriptProperties();
+    const key = aiUsageKey_(deviceId);
+    const used = parseInt(props.getProperty(key) || '0', 10);
+    if (used >= aiLimit_()) return false;
+    props.setProperty(key, String(used + 1));
+    return true;
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function requireAiFields_(params) {
+  const deviceId = String(params.deviceId || '').trim();
+  if (!deviceId || deviceId.length > 128) return jsonOutput_({ error: 'deviceId is required' });
+  if (!consumeAiQuota_(deviceId)) return jsonOutput_({ error: 'ai_daily_limit_reached', limit: aiLimit_() });
+  const cfg = aiConfig_();
+  if (!cfg.key) return jsonOutput_({ error: 'ai_provider_not_configured' });
+  return null;
+}
+
+function aiFetch_(url, payload) {
+  const response = UrlFetchApp.fetch(url, {
+    method: 'post',
+    contentType: 'application/json',
+    muteHttpExceptions: true,
+    headers: { Authorization: 'Bearer ' + payload.apiKey },
+    payload: JSON.stringify(payload.body)
+  });
+  return response;
+}
+
+function handleAiChat_(params) {
+  const denied = requireAiFields_(params);
+  if (denied) return denied;
+  const messages = params.messages;
+  if (!Array.isArray(messages) || messages.length === 0 || messages.length > 40) {
+    return jsonOutput_({ error: 'messages are required' });
+  }
+  const cfg = aiConfig_();
+  try {
+    const response = aiFetch_(cfg.baseUrl + '/chat/completions', {
+      apiKey: cfg.key,
+      body: {
+        model: cfg.model,
+        messages: messages,
+        max_tokens: Number(params.maxTokens || 500),
+        temperature: Number(params.temperature || 0.7)
+      }
+    });
+    if (response.getResponseCode() < 200 || response.getResponseCode() >= 300) {
+      return jsonOutput_({ error: 'ai_unavailable' });
+    }
+    const data = JSON.parse(response.getContentText());
+    return jsonOutput_({ text: data.choices && data.choices[0] && data.choices[0].message
+      ? String(data.choices[0].message.content || '').trim() : '' });
+  } catch (err) {
+    return jsonOutput_({ error: 'ai_unavailable' });
+  }
+}
+
+function handleAiStt_(params) {
+  const denied = requireAiFields_(params);
+  if (denied) return denied;
+  const encoded = String(params.audioBase64 || '');
+  if (!encoded || encoded.length > 10000000) return jsonOutput_({ error: 'audioBase64 is required' });
+  const cfg = aiConfig_();
+  try {
+    const response = UrlFetchApp.fetch(cfg.baseUrl + '/audio/transcriptions', {
+      method: 'post',
+      muteHttpExceptions: true,
+      headers: { Authorization: 'Bearer ' + cfg.key },
+      payload: {
+        model: 'whisper-1',
+        file: Utilities.newBlob(Utilities.base64Decode(encoded), 'audio/mp4', 'audio.m4a')
+      }
+    });
+    if (response.getResponseCode() < 200 || response.getResponseCode() >= 300) {
+      return jsonOutput_({ error: 'stt_unavailable' });
+    }
+    return jsonOutput_({ text: String(JSON.parse(response.getContentText()).text || '') });
+  } catch (err) {
+    return jsonOutput_({ error: 'stt_unavailable' });
+  }
+}
+
+function handleAiTts_(params) {
+  const denied = requireAiFields_(params);
+  if (denied) return denied;
+  const text = String(params.text || '').trim();
+  if (!text || text.length > 4000) return jsonOutput_({ error: 'text is required' });
+  const cfg = aiConfig_();
+  try {
+    let response = aiFetch_(cfg.baseUrl + '/audio/speech', {
+      apiKey: cfg.key,
+      body: { model: 'gpt-4o-mini-tts', voice: 'alloy', input: text }
+    });
+    if (response.getResponseCode() < 200 || response.getResponseCode() >= 300) {
+      response = aiFetch_(cfg.baseUrl + '/audio/speech', {
+        apiKey: cfg.key,
+        body: { model: 'tts-1', voice: 'alloy', input: text }
+      });
+    }
+    if (response.getResponseCode() < 200 || response.getResponseCode() >= 300) {
+      return jsonOutput_({ error: 'tts_unavailable' });
+    }
+    return jsonOutput_({
+      audioBase64: Utilities.base64Encode(response.getBlob().getBytes()),
+      mimeType: 'audio/mpeg'
+    });
+  } catch (err) {
+    return jsonOutput_({ error: 'tts_unavailable' });
+  }
 }
 
 // --- Bazaar / Myket in-app purchase verification (optional) -------------------------

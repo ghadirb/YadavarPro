@@ -23,9 +23,14 @@ import java.util.concurrent.TimeUnit
  */
 object SubscriptionManager {
 
-    const val STATUS_URL = "CHANGE-ME"
-    const val REQUEST_URL = "CHANGE-ME"
-    const val VERIFY_STORE_URL = "CHANGE-ME"
+    // Google Apps Script Web App (server/apps-script/Code.gs), deployed by the app owner.
+    // All three point at the SAME /exec URL with a different "path" query param, which
+    // routeRequest_() in Code.gs reads to decide which handler to run.
+    private const val AI_BACKEND_BASE =
+        "https://script.google.com/macros/s/AKfycbz9aQcHMVqlcqc3qynKdDWjh-rFGUAbRs0-1OrGZhX4JiMGRBwRcA7REDpX7FKy0OP8jw/exec"
+    const val STATUS_URL = "$AI_BACKEND_BASE?path=status"
+    const val REQUEST_URL = "$AI_BACKEND_BASE?path=request"
+    const val VERIFY_STORE_URL = "$AI_BACKEND_BASE?path=verifyStore"
 
     const val FREE_AI_LIFETIME_LIMIT = 15
     const val EXPIRY_REMINDER_DAYS_BEFORE = 3
@@ -34,9 +39,6 @@ object SubscriptionManager {
         MONTHLY("monthly", 30, "اشتراک ماهانه"),
         YEARLY("yearly", 365, "اشتراک سالانه")
     }
-
-    fun backendConfigured(): Boolean =
-        STATUS_URL.isNotBlank() && !STATUS_URL.startsWith("CHANGE-ME")
 
     fun isPremium(context: Context): Boolean {
         return PreferencesManager(context).getPremiumUntil() > System.currentTimeMillis()
@@ -92,7 +94,6 @@ object SubscriptionManager {
     }
 
     suspend fun refreshFromServer(context: Context): Boolean = withContext(Dispatchers.IO) {
-        if (!backendConfigured()) return@withContext false
         try {
             val deviceId = PreferencesManager(context).getOrCreateDeviceId()
             val url = URL(appendParam(STATUS_URL, "deviceId", deviceId))
@@ -120,7 +121,6 @@ object SubscriptionManager {
     }
 
     suspend fun requestPayment(context: Context, plan: Plan): String? = withContext(Dispatchers.IO) {
-        if (!backendConfigured()) return@withContext null
         try {
             val deviceId = PreferencesManager(context).getOrCreateDeviceId()
             var url = appendParam(REQUEST_URL, "deviceId", deviceId)
@@ -141,17 +141,20 @@ object SubscriptionManager {
 
     fun detectStoreChannel(context: Context): StoreChannel = StoreChannel.current()
 
+    /**
+     * Sends a completed Bazaar/Myket in-app-purchase token to the backend so it can be
+     * verified server-to-server against Bazaar's/Myket's own purchase-verification API
+     * before any premium days are granted - never grant premium purely because the SDK
+     * callback on-device said "success", since that response can be spoofed. If the
+     * backend URL isn't configured yet (still "CHANGE-ME"), the request below simply fails
+     * and this returns false - no local fallback grants premium without a server check.
+     */
     suspend fun verifyStorePurchase(
         context: Context,
         channel: StoreChannel,
         plan: Plan,
         purchaseToken: String
     ): Boolean = withContext(Dispatchers.IO) {
-        if (!backendConfigured()) {
-            android.util.Log.w("SubscriptionManager", "Backend URL is CHANGE-ME; granting premium locally")
-            grantLocally(context, plan, channel)
-            return@withContext true
-        }
         try {
             val deviceId = PreferencesManager(context).getOrCreateDeviceId()
             var url = appendParam(VERIFY_STORE_URL, "deviceId", deviceId)
@@ -180,17 +183,6 @@ object SubscriptionManager {
             android.util.Log.w("SubscriptionManager", "verifyStorePurchase failed: ${e.message}")
             false
         }
-    }
-
-    private fun grantLocally(context: Context, plan: Plan, channel: StoreChannel) {
-        val prefs = PreferencesManager(context)
-        val current = prefs.getPremiumUntil()
-        val base = maxOf(current, System.currentTimeMillis())
-        val until = base + plan.days * 24L * 60 * 60 * 1000
-        prefs.setPremiumUntil(until)
-        prefs.setLastStoreChannel(channel.apiValue)
-        prefs.setNotifiedQuotaExhausted(false)
-        scheduleExpiryReminder(context, until)
     }
 
     fun scheduleExpiryReminder(context: Context, premiumUntil: Long) {
