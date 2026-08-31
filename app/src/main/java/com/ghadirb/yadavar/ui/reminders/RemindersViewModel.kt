@@ -33,6 +33,13 @@ class RemindersViewModel(app: Application) : AndroidViewModel(app) {
         else source.filter { it.category == category }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    /** Unlike [visibleReminders], this always reflects every active (not-yet-completed)
+     *  reminder regardless of which chip (Active/Done) or category filter is currently
+     *  selected in the UI - the overdue/today/this-week header summary should never change
+     *  just because the person switched to browsing the "Done" list, and completed
+     *  reminders should never be counted as due. */
+    val activeReminders = repo.active().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
     fun save(reminder: ReminderEntity) = viewModelScope.launch { repo.save(reminder) }
     fun complete(reminder: ReminderEntity) = viewModelScope.launch { repo.complete(reminder) }
     fun delete(reminder: ReminderEntity) = viewModelScope.launch { repo.delete(reminder) }

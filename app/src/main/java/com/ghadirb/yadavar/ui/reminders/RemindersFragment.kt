@@ -71,8 +71,10 @@ class RemindersFragment : Fragment() {
             viewModel.visibleReminders.collect { list ->
                 adapter.submitList(toListItems(list))
                 binding.emptyState.isVisible = list.isEmpty()
-                updatePeriodSummary(list)
             }
+        }
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewModel.activeReminders.collect { updatePeriodSummary(it) }
         }
         viewLifecycleOwner.lifecycleScope.launch {
             viewModel.showCompleted.collect { done ->
@@ -161,8 +163,11 @@ class RemindersFragment : Fragment() {
         val endOfToday = startOfToday + 24 * 60 * 60 * 1000L
         val endOfWeek = startOfToday + 7 * 24 * 60 * 60 * 1000L
         val overdue = list.count { !it.isCompleted && it.triggerTime < now }
-        val today = list.count { it.triggerTime in startOfToday until endOfToday }
-        val thisWeek = list.count { it.triggerTime in endOfToday until endOfWeek }
+        // Upcoming-today only (triggerTime >= now), so a reminder already counted as
+        // "overdue" isn't also double-counted here just because its trigger time happens to
+        // fall earlier today.
+        val today = list.count { !it.isCompleted && it.triggerTime in now until endOfToday }
+        val thisWeek = list.count { !it.isCompleted && it.triggerTime in endOfToday until endOfWeek }
         binding.textPeriodSummary.text = getString(R.string.period_summary, overdue, today, thisWeek)
     }
 
