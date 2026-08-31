@@ -91,7 +91,7 @@ class AssistantViewModel(app: Application) : AndroidViewModel(app) {
             AIBackendClient.chat(app, messages)
         }
         if (raw.isNullOrBlank()) {
-            val debugHint = AIBackendClient.lastError?.let { "\n(جزئیات فنی: $it)" }.orEmpty()
+            val debugHint = AIBackendClient.lastError?.let { "\n($it)" }.orEmpty()
             appendBot("نتوانستم آنلاین تحلیل کنم. مثال: «فردا ساعت ۷ و ۱۵ دقیقه جلسه».$debugHint")
             return
         }

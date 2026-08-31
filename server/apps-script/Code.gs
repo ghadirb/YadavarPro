@@ -1,3 +1,8 @@
+// Yadavar Pro Apps Script backend — version 3
+// After pasting this file you MUST: Deploy → Manage deployments → pencil → New version → Deploy
+// A live v3 /exec URL with no ?path= returns {"ok":true,"service":"yadavar-pro","version":3,...}
+// not {"error":"unknown_path"}.
+//
 // Google Apps Script version of the Maliar Pro billing backend - a free, no-hosting-
 // needed alternative to the Node.js server in /server. Uses PropertiesService as a tiny
 // key-value store (no Google Sheet needed) and UrlFetchApp to call the gateway's API.
@@ -170,18 +175,31 @@ function doPost(e) {
 
 function routeRequest_(e) {
   const params = Object.assign({}, (e && e.parameter) || {}, parseJsonBody_(e));
-  const path = params.path;
+  const path = String(params.path || params.action || '').trim();
+
+  // Visiting /exec in a browser has no ?path= — that used to look like a broken
+  // deploy ("unknown_path"). Return a health payload instead so the owner can
+  // tell a live script from a missing one.
+  if (!path) {
+    return jsonOutput_({
+      ok: true,
+      service: 'yadavar-pro',
+      version: 3,
+      routes: ['status', 'request', 'callback', 'paypingCallback', 'verifyStore', 'aiChat', 'aiStt', 'aiTts'],
+      hint: 'این آدرس سالم است. اپ با ?path=status و ?path=aiChat صدا می‌زند.'
+    });
+  }
 
   if (path === 'status') return handleStatus_(params);
   if (path === 'request') return handleRequest_(params);
   if (path === 'callback') return handleCallback_(params);
   if (path === 'paypingCallback') return handleCallbackPayping_(params);
   if (path === 'verifyStore') return handleVerifyStore_(params);
-  if (path === 'aiChat') return handleAiChat_(params);
-  if (path === 'aiStt') return handleAiStt_(params);
-  if (path === 'aiTts') return handleAiTts_(params);
+  if (path === 'aiChat' || path === 'chat' || path === 'ai_chat') return handleAiChat_(params);
+  if (path === 'aiStt' || path === 'stt' || path === 'ai_stt') return handleAiStt_(params);
+  if (path === 'aiTts' || path === 'tts' || path === 'ai_tts') return handleAiTts_(params);
 
-  return jsonOutput_({ error: 'unknown_path' });
+  return jsonOutput_({ error: 'unknown_path', path: path });
 }
 
 function parseJsonBody_(e) {
@@ -189,10 +207,21 @@ function parseJsonBody_(e) {
     const raw = e && e.postData && e.postData.contents;
     if (!raw) return {};
     const parsed = JSON.parse(raw);
-    return parsed && typeof parsed === 'object' ? parsed : {};
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
   } catch (err) {
     return {};
   }
+}
+
+function coerceMessages_(raw) {
+  if (Array.isArray(raw)) return raw;
+  if (typeof raw === 'string' && raw.trim()) {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed;
+    } catch (err) {}
+  }
+  return null;
 }
 
 function aiConfig_() {
@@ -222,6 +251,7 @@ function aiUsageKey_(deviceId) {
 
 function consumeAiQuota_(deviceId) {
   if (!deviceId || String(deviceId).length > 128) return false;
+  if ((getDeviceRecord_(deviceId).premiumUntil || 0) > Date.now()) return true;
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
@@ -239,9 +269,9 @@ function consumeAiQuota_(deviceId) {
 function requireAiFields_(params) {
   const deviceId = String(params.deviceId || '').trim();
   if (!deviceId || deviceId.length > 128) return jsonOutput_({ error: 'deviceId is required' });
-  if (!consumeAiQuota_(deviceId)) return jsonOutput_({ error: 'ai_daily_limit_reached', limit: aiLimit_() });
   const cfg = aiConfig_();
   if (!cfg.key) return jsonOutput_({ error: 'ai_provider_not_configured' });
+  if (!consumeAiQuota_(deviceId)) return jsonOutput_({ error: 'ai_daily_limit_reached', limit: aiLimit_() });
   return null;
 }
 
@@ -259,8 +289,8 @@ function aiFetch_(url, payload) {
 function handleAiChat_(params) {
   const denied = requireAiFields_(params);
   if (denied) return denied;
-  const messages = params.messages;
-  if (!Array.isArray(messages) || messages.length === 0 || messages.length > 40) {
+  const messages = coerceMessages_(params.messages);
+  if (!messages || messages.length === 0 || messages.length > 40) {
     return jsonOutput_({ error: 'messages are required' });
   }
   const cfg = aiConfig_();
@@ -275,7 +305,7 @@ function handleAiChat_(params) {
       }
     });
     if (response.getResponseCode() < 200 || response.getResponseCode() >= 300) {
-      return jsonOutput_({ error: 'ai_unavailable' });
+      return jsonOutput_({ error: 'ai_unavailable', status: response.getResponseCode() });
     }
     const data = JSON.parse(response.getContentText());
     return jsonOutput_({ text: data.choices && data.choices[0] && data.choices[0].message

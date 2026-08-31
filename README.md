@@ -3,7 +3,7 @@
 اپلیکیشن مستقل یادآوری، جدا شده از بخش یادآوری [ghadirb/Maliar-Pro](https://github.com/ghadirb/Maliar-Pro).
 
 `applicationId`: `com.ghadirb.yadavar`  
-نسخه فعلی: **۱.۴.۰** (`versionCode` 5)
+نسخه فعلی: **۱.۴.۱** (`versionCode` 6)
 
 ## این پروژه از کجا اومده
 

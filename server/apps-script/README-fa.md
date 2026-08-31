@@ -1,76 +1,81 @@
 # نسخه‌ی Google Apps Script (کاملاً رایگان، بدون سرور واقعی)
 
-این جایگزینِ رایگانِ پوشه‌ی `/server` است - همان سه کار را انجام می‌دهد ولی روی
-زیرساخت گوگل اجرا می‌شود؛ نه پولی است، نه نیاز به CLI/دیپلوی دارد، و معمولاً از ایران
-هم بدون مشکل فیلترینگ در دسترس است (چون درخواست از گوشی کاربر ایرانی به سمت گوگل
-می‌رود، نه برعکس - شبیه استفاده از جیمیل یا گوگل‌درایو).
+این جایگزینِ رایگانِ پوشه‌ی `/server` است. هم اشتراک (زرین‌پال / نکست‌پی / پی‌پینگ /
+بازار / مایکت) و هم پروکسی هوش مصنوعی (چت دستیار + صدای هشدار هوشمند) را روی
+زیرساخت گوگل اجرا می‌کند. کلید GapGPT داخل APK نیست؛ فقط در Script Properties می‌ماند.
 
-از دو درگاه پشتیبانی می‌کند - با `PAYMENT_GATEWAY` یکی را انتخاب کنید:
-- **زرین‌پال** - نیاز به مرچنت آی‌دی تاییدشده‌ی خودتان دارد.
-- **نکست‌پی** - نیاز به یک **«درگاه مستقیم» (وب‌سرویس)** دارد که `api_key` می‌دهد؛
-  **«صفحه پرداخت شخصی»** برای این کار مناسب نیست چون فقط یک صفحه‌ی ساده برای دریافت
-  پول از دوستان/مشتریان است و هیچ API ای برای وصل‌شدن برنامه به آن وجود ندارد. در
-  پنل نکست‌پی باید از بخش «امکانات ویژه» یا «درگاه‌ها»، یک «درگاه مستقیم» بسازید و
-  `api_key` مربوط به همان را بردارید.
+## اگر `{"error":"unknown_path"}` می‌بینید
 
-## مراحل نصب
-1. به [script.google.com](https://script.google.com) بروید → پروژه‌ی جدید.
-2. کد `Code.gs` را کامل کپی و جایگزین کد پیش‌فرض کنید.
-3. از آیکون چرخ‌دنده (Project Settings) → پایین صفحه → "Script Properties" → «Add
-   script property» را بزنید. با هر بار زدن این دکمه، یک سطر با دو فیلد **Property**
-   و **Value** اضافه می‌شود: در **Property** اسم دقیق متغیر (مثلاً
-   `ZARINPAL_MERCHANT_ID`) و در **Value** مقدارش را می‌نویسید - این دقیقاً همان چیزی
-   است که این‌جا هم منظور است، فقط این‌طور نمایش داده می‌شود. این مقادیر را (بسته به
-   درگاهی که استفاده می‌کنید) اضافه کنید:
+این یعنی **نسخهٔ دیپلوی‌شده قدیمی است** (مسیرهای `aiChat` / `aiTts` را ندارد) یا
+آدرس را بدون `?path=...` در مرورگر باز کرده‌اید.
+
+1. کل فایل `Code.gs` همین پوشه را کپی کنید و در پروژه Apps Script جایگزین کنید.
+2. **حتماً دوباره Deploy کنید** — ذخیره کردن کد کافی نیست:
+   Deploy → Manage deployments → مداد (Edit) → Version: **New version** → Deploy
+3. در Script Properties این‌ها را اضافه کنید (اگر نیست):
 
    | Property | Value |
    |---|---|
-   | `PAYMENT_GATEWAY` | `zarinpal` یا `nextpay` |
+   | `GAPGPT_API_KEY` | کلید GapGPT شما |
+   | `AI_PROVIDER` | `gapgpt` |
+   | `AI_MODEL` | `gpt-4o-mini` |
+   | `AI_DAILY_LIMIT` | `10` |
+
+4. تست در مرورگر:
+
+   - `.../exec` → باید `{"ok":true,"service":"yadavar-pro",...}` باشد نه `unknown_path`
+   - `.../exec?path=status&deviceId=test` → `{"isPremium":false,"premiumUntil":0}`
+   - `.../exec?path=aiChat&deviceId=test` → `messages are required` یا جواب مدل؛ **نه** `unknown_path`
+     اگر `ai_provider_not_configured` آمد، `GAPGPT_API_KEY` تنظیم نشده.
+
+اپ اندروید از نسخهٔ ۱.۴.۱ به بعد چت و TTS را با GET (`?path=aiChat`) می‌فرستد، چون
+POST به Apps Script بدنه JSON را در ریدایرکت گوگل گم می‌کند.
+
+## درگاه پرداخت
+
+با `PAYMENT_GATEWAY` یکی را انتخاب کنید:
+- **زرین‌پال** - نیاز به مرچنت آی‌دی تاییدشده‌ی خودتان دارد.
+- **نکست‌پی** - نیاز به یک **«درگاه مستقیم» (وب‌سرویس)** دارد که `api_key` می‌دهد؛
+  **«صفحه پرداخت شخصی»** برای این کار مناسب نیست.
+- **پی‌پینگ** - توکن Bearer از کنسول توسعه‌دهنده.
+
+## مراحل نصب (اولین بار)
+1. به [script.google.com](https://script.google.com) بروید → پروژه‌ی جدید.
+2. کد `Code.gs` را کامل کپی و جایگزین کد پیش‌فرض کنید.
+3. از آیکون چرخ‌دنده (Project Settings) → پایین صفحه → "Script Properties" → «Add
+   script property» را بزنید:
+
+   | Property | Value |
+   |---|---|
+   | `PAYMENT_GATEWAY` | `zarinpal` یا `nextpay` یا `payping` |
+   | `GAPGPT_API_KEY` | کلید GapGPT |
+   | `AI_PROVIDER` | `gapgpt` |
 
    اگر `zarinpal`:
 
    | Property | Value |
    |---|---|
-   | `ZARINPAL_MERCHANT_ID` | مرچنت آی‌دی شما (یا مرچنت sandbox برای تست) |
+   | `ZARINPAL_MERCHANT_ID` | مرچنت آی‌دی شما |
    | `ZARINPAL_SANDBOX` | `true` (اول برای تست، بعداً `false`) |
-   | `PRICE_MONTHLY_RIAL` | `800000` (به ریال) |
-   | `PRICE_YEARLY_RIAL` | `6500000` |
+   | `PRICE_MONTHLY_RIAL` | `1990000` |
+   | `PRICE_YEARLY_RIAL` | `18900000` |
 
    اگر `nextpay`:
 
    | Property | Value |
    |---|---|
-   | `NEXTPAY_API_KEY` | `api_key` درگاه مستقیم شما در نکست‌پی |
-   | `PRICE_MONTHLY_TOMAN` | `80000` (به تومان - نکست‌پی تومان می‌گیرد نه ریال) |
-   | `PRICE_YEARLY_TOMAN` | `650000` |
+   | `NEXTPAY_API_KEY` | `api_key` درگاه مستقیم |
+   | `PRICE_MONTHLY_TOMAN` | `199000` |
+   | `PRICE_YEARLY_TOMAN` | `1890000` |
 
-4. دکمه‌ی آبی «Deploy» بالا سمت راست → «New deployment» → روی چرخ‌دنده‌ی کنار
-   «Select type» بزنید → «Web app» را انتخاب کنید.
+4. دکمه‌ی آبی «Deploy» بالا سمت راست → «New deployment» → نوع: «Web app».
    - Execute as: **Me**
    - Who has access: **Anyone**
-   - «Deploy» را بزنید و اجازه‌ی دسترسی (Authorize access) را با اکانت گوگل خودتان تایید کنید.
-5. یک آدرس مثل این به شما داده می‌شود:
-   `https://script.google.com/macros/s/AKfycb.../exec`
-   این را کپی کنید.
+   - «Deploy» را بزنید و Authorize کنید.
+5. آدرس `https://script.google.com/macros/s/AKfycb.../exec` را کپی کنید. همین آدرس
+   در اپ داخل `SubscriptionManager` و `AI_BACKEND_URL` تنظیم شده است.
 
-## وصل کردن به اپ اندروید
-در فایل `app/src/main/java/com/maliar/pro/utils/SubscriptionManager.kt`:
-```kotlin
-const val STATUS_URL = "https://script.google.com/macros/s/AKfycb.../exec?path=status"
-const val REQUEST_URL = "https://script.google.com/macros/s/AKfycb.../exec?path=request"
-```
-(همان آدرس exec، فقط با `?path=status` و `?path=request` در انتهایش) و اپ را rebuild کنید.
-
-## تست
-- زرین‌پال: ابتدا با `ZARINPAL_SANDBOX=true` امتحان کنید، بعد از تایید صحت عملکرد،
-  `ZARINPAL_SANDBOX` را `false` و مرچنت واقعی را جایگزین کنید.
-- نکست‌پی: sandbox جدا ندارد؛ یک تراکنش واقعی با مبلغ کم (مثلاً ۱۰۰۰ تومان) امتحان
-  کنید تا مطمئن شوید توکن ساخته می‌شود، به صفحه‌ی پرداخت می‌رود، و بعد از پرداخت،
-  اشتراک پریمیوم در برنامه فعال می‌شود.
-
-## محدودیت‌ها (برای مقیاس آینده)
-- ذخیره‌سازی با `PropertiesService` است، نه یک دیتابیس واقعی - برای صدها/چندهزار کاربر
-  کاملاً کافی است؛ اگر خیلی بزرگ شدید، همین ساختار قابل جایگزینی با یک Google Sheet یا
-  دیتابیس واقعی است.
-- هر بار که کد را در Apps Script ویرایش می‌کنید، باید از «Deploy» → «Manage deployments»
-  → مداد ویرایش → نسخه‌ی جدید را «Deploy» کنید تا تغییرات روی آدرس exec اعمال شوند.
+## محدودیت‌ها
+- ذخیره‌سازی با `PropertiesService` است؛ برای صدها/چندهزار کاربر کافی است.
+- هر بار که کد را ویرایش می‌کنید باید از Manage deployments نسخهٔ جدید Deploy شود.
+  ذخیره به‌تنهایی روی آدرس `/exec` اعمال نمی‌شود.
