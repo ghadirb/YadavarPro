@@ -91,7 +91,7 @@ class FullScreenAlarmActivity : AppCompatActivity() {
         isSmart = intent.getStringExtra("alert_type") == "SMART"
         binding.textTitle.text = titleExtra.orEmpty()
         binding.textDescription.text = descExtra.orEmpty()
-        binding.textHint.text = if (isSmart) getString(com.ghadirb.yadavar.R.string.smart_tts_playing) else getString(com.ghadirb.yadavar.R.string.alert_full_screen)
+        binding.textHint.text = if (isSmart) getString(com.ghadirb.yadavar.R.string.smart_tts_preparing) else getString(com.ghadirb.yadavar.R.string.alert_full_screen)
         binding.textHint.visibility = android.view.View.VISIBLE
         if (isSmart) {
             val spoken = spokenExtra?.takeIf { it.isNotBlank() }

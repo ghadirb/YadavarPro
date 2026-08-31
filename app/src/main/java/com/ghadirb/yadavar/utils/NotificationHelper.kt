@@ -50,18 +50,13 @@ object NotificationHelper {
                     showPlain(context, reminder)
                     return
                 }
-                // Ring immediately via the TTS service (local alarm, then cloud voice).
-                // Also present the same full-screen alarm UI as FULL_SCREEN — previously
-                // SMART only started a foreground-service notification, so with the screen
-                // on the user just saw a heads-up and no alarm.
                 SmartReminderTtsService.start(
                     context,
                     reminder.id,
                     reminder.title,
-                    reminder.description,
-                    reminder.soundUri
+                    reminder.description
                 )
-                showFullScreen(context, reminder)
+                showFullScreen(context, reminder, silent = true)
                 return
             }
             AlertType.FULL_SCREEN.name -> {
@@ -73,7 +68,7 @@ object NotificationHelper {
         }
     }
 
-    private fun showFullScreen(context: Context, reminder: ReminderEntity) {
+    private fun showFullScreen(context: Context, reminder: ReminderEntity, silent: Boolean = false) {
         val alarmIntent = fullScreenIntent(context, reminder)
         if (YadavarApplication.isAppInForeground()) {
             context.startActivity(alarmIntent)
@@ -83,7 +78,9 @@ object NotificationHelper {
             context, reminder.id.toInt(), alarmIntent,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
-        val notification = NotificationCompat.Builder(context, YadavarApplication.REMINDER_CHANNEL_ID)
+        val channelId = if (silent) YadavarApplication.SMART_ALERT_CHANNEL_ID
+            else YadavarApplication.REMINDER_CHANNEL_ID
+        val builder = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(R.drawable.ic_notification_reminder)
             .setContentTitle(reminder.title)
             .setContentText(reminder.description.ifBlank { reminder.notes })
@@ -94,12 +91,29 @@ object NotificationHelper {
             .setContentIntent(fullPi)
             .addAction(R.drawable.ic_check, context.getString(R.string.action_done), actionPendingIntent(context, reminder, ReminderActionReceiver.ACTION_DONE))
             .addAction(R.drawable.ic_snooze, context.getString(R.string.action_snooze), actionPendingIntent(context, reminder, ReminderActionReceiver.ACTION_SNOOZE))
-            .build()
+        if (silent) {
+            builder.setSilent(true)
+            builder.setSound(null)
+        }
+        val notification = builder.build()
         try {
             NotificationManagerCompat.from(context).notify(reminder.id.toInt(), notification)
         } catch (_: SecurityException) {
             context.startActivity(alarmIntent)
         }
+    }
+
+    /** Last resort when online sentence + speech both fail. */
+    fun showDefaultSoundFallback(context: Context, reminderId: Long, title: String, text: String) {
+        val reminder = ReminderEntity(
+            id = reminderId,
+            title = title,
+            description = text,
+            triggerTime = System.currentTimeMillis(),
+            alertType = AlertType.NOTIFICATION.name,
+            soundUri = ReminderSound.DEFAULT_ALARM
+        )
+        showPlain(context, reminder)
     }
 
     private fun showPlain(context: Context, reminder: ReminderEntity) {

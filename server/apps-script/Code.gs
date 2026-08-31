@@ -1,6 +1,6 @@
-// Yadavar Pro Apps Script backend — version 5
+// Yadavar Pro Apps Script backend — version 6
 // After pasting this file you MUST: Deploy → Manage deployments → pencil → New version → Deploy
-// A live v5 /exec URL with no ?path= returns {"ok":true,"service":"yadavar-pro","version":5,...}
+// A live v6 /exec URL with no ?path= returns {"ok":true,"service":"yadavar-pro","version":6,...}
 // not {"error":"unknown_path"}.
 //
 // Google Apps Script version of the Maliar Pro billing backend - a free, no-hosting-
@@ -184,7 +184,7 @@ function routeRequest_(e) {
     return jsonOutput_({
       ok: true,
       service: 'yadavar-pro',
-      version: 5,
+      version: 6,
       routes: ['status', 'request', 'callback', 'paypingCallback', 'verifyStore', 'aiChat', 'aiStt', 'aiTts', 'aiSmartAlert'],
       hint: 'این آدرس سالم است. اپ با ?path=status و ?path=aiChat صدا می‌زند.'
     });
@@ -276,11 +276,13 @@ function requireAiFields_(params) {
   return null;
 }
 
-function aiFetch_(url, payload) {
+function aiFetch_(url, payload, timeoutSec) {
   const response = UrlFetchApp.fetch(url, {
     method: 'post',
     contentType: 'application/json',
     muteHttpExceptions: true,
+    followRedirects: true,
+    timeout: timeoutSec || 20,
     headers: { Authorization: 'Bearer ' + payload.apiKey },
     payload: JSON.stringify(payload.body)
   });
@@ -348,7 +350,7 @@ function handleAiTts_(params) {
   if (!text || text.length > 4000) return jsonOutput_({ error: 'text is required' });
   const result = synthesizeSpeech_(text);
   if (result.error) return jsonOutput_({ error: result.error, status: result.status || 0 });
-  return jsonOutput_({ audioBase64: result.audioBase64, mimeType: 'audio/mpeg' });
+  return jsonOutput_({ audioBase64: result.audioBase64, mimeType: result.mimeType || 'audio/mpeg' });
 }
 
 function spokenReminderFallback_(title, description) {
@@ -370,7 +372,7 @@ function rewriteSpokenReminder_(title, description) {
         messages: [
           {
             role: 'system',
-            content: 'تو گوینده هشدار یادآور هستی. فقط یک جمله کوتاه محاوره‌ای فارسی برگردان که با صدای بلند برای کاربر خوانده شود. بدون اموجی، بدون نقل‌قول، بدون توضیح اضافه.'
+            content: 'فقط فارسی محاوره‌ای. یک جمله کوتاه برای خواندن با صدای بلند برگردان. بدون انگلیسی، بدون اموجی، بدون نقل‌قول، بدون توضیح. مثال: سلام، الان وقتشه که قرص فشارتو بخوری.'
           },
           {
             role: 'user',
@@ -386,34 +388,152 @@ function rewriteSpokenReminder_(title, description) {
     const text = data.choices && data.choices[0] && data.choices[0].message
       ? String(data.choices[0].message.content || '').trim() : '';
     if (!text) return fallback;
-    return text.replace(/^["'«»]+|["'«»]+$/g, '').slice(0, 220);
+    const cleaned = text.replace(/^["'«»]+|["'«»]+$/g, '').slice(0, 220);
+    return /[\u0600-\u06FF]/.test(cleaned) ? cleaned : fallback;
   } catch (err) {
     return fallback;
   }
 }
 
-function synthesizeSpeech_(text) {
+function headerValue_(headers, name) {
+  if (!headers) return '';
+  const lower = String(name).toLowerCase();
+  const keys = Object.keys(headers);
+  for (let i = 0; i < keys.length; i++) {
+    if (String(keys[i]).toLowerCase() === lower) return String(headers[keys[i]] || '');
+  }
+  return '';
+}
+
+function looksLikeAudio_(bytes) {
+  if (!bytes || bytes.length < 64) return false;
+  const b0 = bytes[0] < 0 ? bytes[0] + 256 : bytes[0];
+  const b1 = bytes[1] < 0 ? bytes[1] + 256 : bytes[1];
+  const b2 = bytes[2] < 0 ? bytes[2] + 256 : bytes[2];
+  const b3 = bytes[3] < 0 ? bytes[3] + 256 : bytes[3];
+  if (b0 === 0x49 && b1 === 0x44 && b2 === 0x33) return true; // ID3
+  if (b0 === 0xFF && (b1 & 0xE0) === 0xE0) return true; // MPEG frame
+  if (b0 === 0x52 && b1 === 0x49 && b2 === 0x46 && b3 === 0x46) return true; // RIFF
+  if (b0 === 0x4F && b1 === 0x67 && b2 === 0x67 && b3 === 0x53) return true; // Ogg
+  return bytes.length > 800;
+}
+
+function wavFromPcm16_(pcmBytes, sampleRate) {
+  const rate = sampleRate || 24000;
+  const dataSize = pcmBytes.length;
+  const header = [];
+  function pushStr(s) {
+    for (let i = 0; i < s.length; i++) header.push(s.charCodeAt(i) & 255);
+  }
+  function push16(v) {
+    header.push(v & 255, (v >> 8) & 255);
+  }
+  function push32(v) {
+    header.push(v & 255, (v >> 8) & 255, (v >> 16) & 255, (v >> 24) & 255);
+  }
+  pushStr('RIFF');
+  push32(36 + dataSize);
+  pushStr('WAVE');
+  pushStr('fmt ');
+  push32(16);
+  push16(1);
+  push16(1);
+  push32(rate);
+  push32(rate * 2);
+  push16(2);
+  push16(16);
+  pushStr('data');
+  push32(dataSize);
+  const wav = [];
+  for (let i = 0; i < header.length; i++) wav.push(header[i]);
+  for (let i = 0; i < dataSize; i++) {
+    const b = pcmBytes[i];
+    wav.push(typeof b === 'number' && b < 0 ? b + 256 : b);
+  }
+  return Utilities.base64Encode(wav);
+}
+
+function synthesizeOpenAiSpeech_(text, model, timeoutSec) {
   const cfg = aiConfig_();
-  const models = ['tts-1', 'gpt-4o-mini-tts'];
-  try {
-    let lastStatus = 0;
-    for (let i = 0; i < models.length; i++) {
-      const response = aiFetch_(cfg.baseUrl + '/audio/speech', {
-        apiKey: cfg.key,
-        body: { model: models[i], voice: 'alloy', input: text, response_format: 'mp3' }
-      });
-      lastStatus = response.getResponseCode();
-      if (lastStatus >= 200 && lastStatus < 300) {
-        const bytes = response.getBlob().getBytes();
-        if (bytes && bytes.length > 0) {
-          return { audioBase64: Utilities.base64Encode(bytes) };
+  const response = aiFetch_(cfg.baseUrl + '/audio/speech', {
+    apiKey: cfg.key,
+    body: { model: model, voice: 'alloy', input: text, response_format: 'mp3' }
+  }, timeoutSec || 12);
+  const status = response.getResponseCode();
+  if (status < 200 || status >= 300) return { error: 'tts_unavailable', status: status };
+  const contentType = headerValue_(response.getHeaders(), 'Content-Type').toLowerCase();
+  if (contentType.indexOf('json') !== -1) {
+    try {
+      const data = JSON.parse(response.getContentText());
+      const err = data && (data.error && data.error.message ? data.error.message : data.error);
+      return { error: String(err || 'tts_unavailable'), status: status };
+    } catch (err) {
+      return { error: 'tts_unavailable', status: status };
+    }
+  }
+  const bytes = response.getBlob().getBytes();
+  if (!looksLikeAudio_(bytes)) return { error: 'tts_unavailable', status: status };
+  return { audioBase64: Utilities.base64Encode(bytes), mimeType: 'audio/mpeg' };
+}
+
+function synthesizeGeminiTts_(text) {
+  const cfg = aiConfig_();
+  const url = cfg.baseUrl + '/models/gemini-2.5-flash-preview-tts:generateContent';
+  const response = UrlFetchApp.fetch(url, {
+    method: 'post',
+    contentType: 'application/json',
+    muteHttpExceptions: true,
+    followRedirects: true,
+    timeout: 18,
+    headers: { Authorization: 'Bearer ' + cfg.key },
+    payload: JSON.stringify({
+      contents: 'با صدای واضح و محاوره‌ای فارسی بگو: ' + text,
+      generationConfig: {
+        response_modalities: ['AUDIO'],
+        speech_config: {
+          voice_config: {
+            prebuilt_voice_config: { voice_name: 'Kore' }
+          }
         }
       }
-    }
-    return { error: 'tts_unavailable', status: lastStatus };
-  } catch (err) {
-    return { error: 'tts_unavailable' };
+    })
+  });
+  const status = response.getResponseCode();
+  if (status < 200 || status >= 300) return { error: 'tts_unavailable', status: status };
+  const data = JSON.parse(response.getContentText());
+  const part = data && data.candidates && data.candidates[0] && data.candidates[0].content
+    && data.candidates[0].content.parts && data.candidates[0].content.parts[0]
+    ? data.candidates[0].content.parts[0] : null;
+  const inline = part && (part.inlineData || part.inline_data);
+  const b64 = inline && (inline.data || inline.Data);
+  if (!b64) return { error: 'tts_unavailable', status: status };
+  const mime = String(inline.mimeType || inline.mime_type || '').toLowerCase();
+  if (mime.indexOf('mpeg') !== -1 || mime.indexOf('mp3') !== -1) {
+    return { audioBase64: b64, mimeType: 'audio/mpeg' };
   }
+  if (mime.indexOf('wav') !== -1) {
+    return { audioBase64: b64, mimeType: 'audio/wav' };
+  }
+  const pcm = Utilities.base64Decode(b64);
+  const rateMatch = mime.match(/rate=(\d+)/);
+  const sampleRate = rateMatch ? parseInt(rateMatch[1], 10) : 24000;
+  return { audioBase64: wavFromPcm16_(pcm, sampleRate), mimeType: 'audio/wav' };
+}
+
+function synthesizeSpeech_(text) {
+  try {
+    const first = synthesizeOpenAiSpeech_(text, 'tts-1', 10);
+    if (first && first.audioBase64) return first;
+  } catch (err) {}
+  try {
+    const gemini = synthesizeGeminiTts_(text);
+    if (gemini && gemini.audioBase64) return gemini;
+  } catch (err) {}
+  try {
+    const second = synthesizeOpenAiSpeech_(text, 'gpt-4o-mini-tts', 10);
+    if (second && second.audioBase64) return second;
+  } catch (err) {}
+  return { error: 'tts_unavailable' };
 }
 
 function handleAiSmartAlert_(params) {
@@ -428,7 +548,7 @@ function handleAiSmartAlert_(params) {
   return jsonOutput_({
     text: spoken,
     audioBase64: result.audioBase64,
-    mimeType: 'audio/mpeg'
+    mimeType: result.mimeType || 'audio/mpeg'
   });
 }
 

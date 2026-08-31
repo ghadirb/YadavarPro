@@ -22,8 +22,10 @@ import java.net.URLEncoder
  * TTS therefore go as GET; STT still POSTs because audio is too large for a URL.
  */
 object AIBackendClient {
-    private const val CONNECT_TIMEOUT_MS = 20_000
-    private const val READ_TIMEOUT_MS = 60_000
+    private const val CONNECT_TIMEOUT_MS = 15_000
+    private const val READ_TIMEOUT_MS = 35_000
+    private const val CHAT_READ_TIMEOUT_MS = 20_000
+    private const val TTS_READ_TIMEOUT_MS = 35_000
     private const val MAX_REDIRECTS = 5
 
     var lastError: String? = null
@@ -57,7 +59,12 @@ object AIBackendClient {
         return code to raw
     }
 
-    private fun getJson(context: Context, path: String, extra: Map<String, String>): Pair<Int, String> {
+    private fun getJson(
+        context: Context,
+        path: String,
+        extra: Map<String, String>,
+        readTimeoutMs: Int = READ_TIMEOUT_MS
+    ): Pair<Int, String> {
         if (!configured()) return -1 to "AI_BACKEND_URL not configured"
         val deviceId = PreferencesManager(context).getOrCreateDeviceId()
         val params = LinkedHashMap<String, String>()
@@ -71,7 +78,7 @@ object AIBackendClient {
             requestMethod = "GET"
             instanceFollowRedirects = true
             connectTimeout = CONNECT_TIMEOUT_MS
-            readTimeout = READ_TIMEOUT_MS
+            readTimeout = readTimeoutMs
             setRequestProperty("Accept", "application/json")
             setRequestProperty("X-Yadavar-Device-Id", deviceId)
         }
@@ -166,7 +173,8 @@ object AIBackendClient {
                         "messages" to messages.toString(),
                         "maxTokens" to maxTokens.toString(),
                         "temperature" to temperature.toString()
-                    )
+                    ),
+                    CHAT_READ_TIMEOUT_MS
                 )
             } else {
                 val body = JSONObject()
@@ -198,7 +206,7 @@ object AIBackendClient {
         lastError = null
         runCatching {
             val (code, raw) = if (isAppsScript()) {
-                getJson(context, "/ai/tts", mapOf("text" to text.take(220)))
+                getJson(context, "/ai/tts", mapOf("text" to text.take(220)), TTS_READ_TIMEOUT_MS)
             } else {
                 val body = JSONObject()
                     .put("path", routeFor("/ai/tts"))
@@ -216,7 +224,9 @@ object AIBackendClient {
                 lastError = explain(json.optString("error").ifBlank { "empty response" })
                 return@runCatching null
             }
-            File(context.cacheDir, "reminder_tts_${System.currentTimeMillis()}.mp3").also {
+            val mime = json.optString("mimeType").lowercase()
+            val ext = if (mime.contains("wav")) "wav" else "mp3"
+            File(context.cacheDir, "reminder_tts_${System.currentTimeMillis()}.$ext").also {
                 it.writeBytes(Base64.decode(encoded, Base64.DEFAULT))
                 if (it.length() < 64L) it.delete()
             }.takeIf { it.exists() && it.length() >= 64L }

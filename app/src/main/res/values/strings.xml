@@ -155,9 +155,11 @@
     <string name="bg_channel_name">Background</string>
     <string name="bg_channel_desc">Silent keep-alive for reminder alarms</string>
     <string name="smart_tts_channel_name">Spoken alert playback</string>
-    <string name="smart_tts_channel_desc">Keeps the spoken smart alert playing</string>
+    <string name="smart_tts_channel_desc">Keeps the spoken smart alert playing without the default phone alarm</string>
+    <string name="smart_alert_channel_name">Smart alert screen</string>
+    <string name="smart_alert_channel_desc">Full-screen smart alert without the default notification sound</string>
     <string name="smart_tts_playing">Smart alert is speaking. It repeats until you tap Done.</string>
-    <string name="smart_tts_preparing">Preparing spoken smart alert…</string>
+    <string name="smart_tts_preparing">Building a spoken sentence…</string>
     <string name="battery_hint">On Xiaomi and Huawei, turn off battery optimization for this app so alarms are not killed.</string>
 </resources>
 

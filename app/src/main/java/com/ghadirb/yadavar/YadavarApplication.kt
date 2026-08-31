@@ -22,7 +22,8 @@ class YadavarApplication : Application() {
     companion object {
         const val REMINDER_CHANNEL_ID = "reminder_channel"
         const val BACKGROUND_CHANNEL_ID = "background_channel"
-        const val SMART_TTS_CHANNEL_ID = "smart_tts_channel"
+        const val SMART_TTS_CHANNEL_ID = "smart_tts_silent_v2"
+        const val SMART_ALERT_CHANNEL_ID = "smart_alert_silent_v2"
 
         private val startedActivityCount = AtomicInteger(0)
         fun isAppInForeground(): Boolean = startedActivityCount.get() > 0
@@ -59,6 +60,8 @@ class YadavarApplication : Application() {
     private fun createNotificationChannels() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val manager = getSystemService(NotificationManager::class.java)
+            runCatching { manager.deleteNotificationChannel("smart_tts_channel") }
+            runCatching { manager.deleteNotificationChannel("smart_alert_channel") }
             manager.createNotificationChannel(
                 NotificationChannel(
                     REMINDER_CHANNEL_ID,
@@ -85,6 +88,19 @@ class YadavarApplication : Application() {
                     description = getString(R.string.smart_tts_channel_desc)
                     setSound(null, null)
                     enableVibration(false)
+                    setShowBadge(false)
+                }
+            )
+            manager.createNotificationChannel(
+                NotificationChannel(
+                    SMART_ALERT_CHANNEL_ID,
+                    getString(R.string.smart_alert_channel_name),
+                    NotificationManager.IMPORTANCE_HIGH
+                ).apply {
+                    description = getString(R.string.smart_alert_channel_desc)
+                    setSound(null, null)
+                    enableVibration(true)
+                    vibrationPattern = longArrayOf(0, 400, 200, 400)
                     setShowBadge(false)
                 }
             )
