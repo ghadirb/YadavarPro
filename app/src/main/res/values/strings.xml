@@ -154,6 +154,9 @@
     <string name="bg_running_body">Alarms and spoken alerts still fire with the screen off</string>
     <string name="bg_channel_name">Background</string>
     <string name="bg_channel_desc">Silent keep-alive for reminder alarms</string>
+    <string name="smart_tts_channel_name">Spoken alert playback</string>
+    <string name="smart_tts_channel_desc">Keeps the spoken smart alert playing</string>
+    <string name="smart_tts_playing">Playing spoken reminder</string>
     <string name="battery_hint">On Xiaomi and Huawei, turn off battery optimization for this app so alarms are not killed.</string>
 </resources>
 

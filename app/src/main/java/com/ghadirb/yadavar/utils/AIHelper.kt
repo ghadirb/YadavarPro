@@ -97,26 +97,32 @@ object AIHelper {
     suspend fun synthesizeSpeech(context: Context, text: String): File? = withContext(Dispatchers.IO) {
         val picked = pickKey(context) ?: return@withContext null
         val (key, hosted) = picked
-        val result = synthesizeWithModel(context, key.key, text, "gpt-4o-mini-tts")
-            ?: synthesizeWithModel(context, key.key, text, "tts-1")
+        val result = synthesizeWithModel(context, key, text, "tts-1")
+            ?: synthesizeWithModel(context, key, text, "gpt-4o-mini-tts")
         if (result != null && hosted) SubscriptionManager.recordAiUsage(context)
         result
     }
 
-    private fun synthesizeWithModel(context: Context, apiKey: String, text: String, model: String): File? {
+    private fun synthesizeWithModel(
+        context: Context,
+        key: com.ghadirb.yadavar.models.APIKey,
+        text: String,
+        model: String
+    ): File? {
         return try {
-            val url = URL("https://api.gapgpt.app/v1/audio/speech")
+            val url = URL("${baseUrlFor(key)}/audio/speech")
             val connection = url.openConnection() as HttpURLConnection
             connection.requestMethod = "POST"
             connection.doOutput = true
             connection.connectTimeout = 15000
-            connection.readTimeout = 20000
-            connection.setRequestProperty("Authorization", "Bearer $apiKey")
+            connection.readTimeout = 25000
+            connection.setRequestProperty("Authorization", "Bearer ${key.key}")
             connection.setRequestProperty("Content-Type", "application/json")
             val body = JSONObject().apply {
                 put("model", model)
                 put("voice", "alloy")
                 put("input", text.take(220))
+                put("response_format", "mp3")
             }
             OutputStreamWriter(connection.outputStream).use { it.write(body.toString()) }
             if (connection.responseCode != HttpURLConnection.HTTP_OK) return null

@@ -50,10 +50,18 @@ object NotificationHelper {
                     showPlain(context, reminder)
                     return
                 }
-                SmartReminderTtsService.start(context, reminder.id, reminder.title, reminder.description)
-                if (YadavarApplication.isAppInForeground()) {
-                    context.startActivity(fullScreenIntent(context, reminder))
-                }
+                // Ring immediately via the TTS service (local alarm, then cloud voice).
+                // Also present the same full-screen alarm UI as FULL_SCREEN — previously
+                // SMART only started a foreground-service notification, so with the screen
+                // on the user just saw a heads-up and no alarm.
+                SmartReminderTtsService.start(
+                    context,
+                    reminder.id,
+                    reminder.title,
+                    reminder.description,
+                    reminder.soundUri
+                )
+                showFullScreen(context, reminder)
                 return
             }
             AlertType.FULL_SCREEN.name -> {

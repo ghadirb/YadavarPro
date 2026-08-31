@@ -1,6 +1,6 @@
-// Yadavar Pro Apps Script backend — version 3
+// Yadavar Pro Apps Script backend — version 4
 // After pasting this file you MUST: Deploy → Manage deployments → pencil → New version → Deploy
-// A live v3 /exec URL with no ?path= returns {"ok":true,"service":"yadavar-pro","version":3,...}
+// A live v4 /exec URL with no ?path= returns {"ok":true,"service":"yadavar-pro","version":4,...}
 // not {"error":"unknown_path"}.
 //
 // Google Apps Script version of the Maliar Pro billing backend - a free, no-hosting-
@@ -184,7 +184,7 @@ function routeRequest_(e) {
     return jsonOutput_({
       ok: true,
       service: 'yadavar-pro',
-      version: 3,
+      version: 4,
       routes: ['status', 'request', 'callback', 'paypingCallback', 'verifyStore', 'aiChat', 'aiStt', 'aiTts'],
       hint: 'این آدرس سالم است. اپ با ?path=status و ?path=aiChat صدا می‌زند.'
     });
@@ -346,24 +346,28 @@ function handleAiTts_(params) {
   const text = String(params.text || '').trim();
   if (!text || text.length > 4000) return jsonOutput_({ error: 'text is required' });
   const cfg = aiConfig_();
+  // tts-1 first: typically a few seconds. gpt-4o-mini-tts is nicer but often 15–20s,
+  // which is too slow for an alarm (the Android client rings a local sound meanwhile).
+  const models = ['tts-1', 'gpt-4o-mini-tts'];
   try {
-    let response = aiFetch_(cfg.baseUrl + '/audio/speech', {
-      apiKey: cfg.key,
-      body: { model: 'gpt-4o-mini-tts', voice: 'alloy', input: text }
-    });
-    if (response.getResponseCode() < 200 || response.getResponseCode() >= 300) {
-      response = aiFetch_(cfg.baseUrl + '/audio/speech', {
+    let lastStatus = 0;
+    for (let i = 0; i < models.length; i++) {
+      const response = aiFetch_(cfg.baseUrl + '/audio/speech', {
         apiKey: cfg.key,
-        body: { model: 'tts-1', voice: 'alloy', input: text }
+        body: { model: models[i], voice: 'alloy', input: text, response_format: 'mp3' }
       });
+      lastStatus = response.getResponseCode();
+      if (lastStatus >= 200 && lastStatus < 300) {
+        const bytes = response.getBlob().getBytes();
+        if (bytes && bytes.length > 0) {
+          return jsonOutput_({
+            audioBase64: Utilities.base64Encode(bytes),
+            mimeType: 'audio/mpeg'
+          });
+        }
+      }
     }
-    if (response.getResponseCode() < 200 || response.getResponseCode() >= 300) {
-      return jsonOutput_({ error: 'tts_unavailable' });
-    }
-    return jsonOutput_({
-      audioBase64: Utilities.base64Encode(response.getBlob().getBytes()),
-      mimeType: 'audio/mpeg'
-    });
+    return jsonOutput_({ error: 'tts_unavailable', status: lastStatus });
   } catch (err) {
     return jsonOutput_({ error: 'tts_unavailable' });
   }

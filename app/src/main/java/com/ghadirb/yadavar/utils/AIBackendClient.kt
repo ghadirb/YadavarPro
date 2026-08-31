@@ -217,8 +217,8 @@ object AIBackendClient {
             }
             File(context.cacheDir, "reminder_tts_${System.currentTimeMillis()}.mp3").also {
                 it.writeBytes(Base64.decode(encoded, Base64.DEFAULT))
-                if (it.length() == 0L) it.delete()
-            }.takeIf { it.exists() && it.length() > 0 }
+                if (it.length() < 64L) it.delete()
+            }.takeIf { it.exists() && it.length() >= 64L }
         }.onFailure { lastError = it.message ?: it.javaClass.simpleName }.getOrNull()
     }
 }

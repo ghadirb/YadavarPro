@@ -154,6 +154,9 @@
     <string name="bg_running_body">زنگ‌ها و هشدار هوشمند حتی با صفحه خاموش کار می‌کنند</string>
     <string name="bg_channel_name">فعالیت پس‌زمینه</string>
     <string name="bg_channel_desc">اعلان کم‌صدا برای زنده ماندن زنگ‌ها</string>
+    <string name="smart_tts_channel_name">پخش هشدار هوشمند</string>
+    <string name="smart_tts_channel_desc">نگه‌داشتن پخش صدای هشدار هوشمند</string>
+    <string name="smart_tts_playing">در حال پخش یادآوری صوتی</string>
     <string name="battery_hint">روی شیائومی و هواوی، بهینه‌سازی باتری را برای این برنامه خاموش کنید تا زنگ قطع نشود.</string>
 </resources>
 

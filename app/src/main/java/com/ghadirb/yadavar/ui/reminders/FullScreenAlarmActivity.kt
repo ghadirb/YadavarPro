@@ -180,6 +180,7 @@ class FullScreenAlarmActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        if (isChangingConfigurations) return
         stopAlarm()
     }
 }

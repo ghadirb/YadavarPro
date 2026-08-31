@@ -22,6 +22,7 @@ class YadavarApplication : Application() {
     companion object {
         const val REMINDER_CHANNEL_ID = "reminder_channel"
         const val BACKGROUND_CHANNEL_ID = "background_channel"
+        const val SMART_TTS_CHANNEL_ID = "smart_tts_channel"
 
         private val startedActivityCount = AtomicInteger(0)
         fun isAppInForeground(): Boolean = startedActivityCount.get() > 0
@@ -72,6 +73,18 @@ class YadavarApplication : Application() {
                     NotificationManager.IMPORTANCE_MIN
                 ).apply {
                     description = getString(R.string.bg_channel_desc)
+                    setShowBadge(false)
+                }
+            )
+            manager.createNotificationChannel(
+                NotificationChannel(
+                    SMART_TTS_CHANNEL_ID,
+                    getString(R.string.smart_tts_channel_name),
+                    NotificationManager.IMPORTANCE_LOW
+                ).apply {
+                    description = getString(R.string.smart_tts_channel_desc)
+                    setSound(null, null)
+                    enableVibration(false)
                     setShowBadge(false)
                 }
             )
