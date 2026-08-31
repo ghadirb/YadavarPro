@@ -112,6 +112,8 @@ class AddReminderDialog : DialogFragment() {
             viewModel.getById(editingId) { reminder ->
                 if (reminder != null && _binding != null) applyReminder(reminder)
             }
+        } else {
+            snapToMinute()
         }
         updateDateTimeLabel()
 
@@ -155,6 +157,7 @@ class AddReminderDialog : DialogFragment() {
         binding.editTitle.setText(reminder.title)
         binding.editDescription.setText(reminder.description)
         calendar.timeInMillis = reminder.triggerTime
+        snapToMinute()
         binding.checkBypassQuiet.isChecked = reminder.bypassQuietHours
         selectOption(binding.spinnerType, reminder.reminderType)
         selectOption(binding.spinnerRepeat, reminder.repeatPattern)
@@ -201,6 +204,7 @@ class AddReminderDialog : DialogFragment() {
             calendar.set(Calendar.YEAR, gy)
             calendar.set(Calendar.MONTH, gm - 1)
             calendar.set(Calendar.DAY_OF_MONTH, gd)
+            snapToMinute()
             updateDateTimeLabel()
         }
         dialog.show(parentFragmentManager, "jalali_date")
@@ -212,6 +216,7 @@ class AddReminderDialog : DialogFragment() {
             { _, h, min ->
                 calendar.set(Calendar.HOUR_OF_DAY, h)
                 calendar.set(Calendar.MINUTE, min)
+                snapToMinute()
                 updateDateTimeLabel()
             },
             calendar.get(Calendar.HOUR_OF_DAY), calendar.get(Calendar.MINUTE), true
@@ -235,7 +240,13 @@ class AddReminderDialog : DialogFragment() {
         return days.joinToString(",")
     }
 
+    private fun snapToMinute() {
+        calendar.set(Calendar.SECOND, 0)
+        calendar.set(Calendar.MILLISECOND, 0)
+    }
+
     private fun save() {
+        snapToMinute()
         val title = binding.editTitle.text?.toString()?.trim().orEmpty()
         if (title.isEmpty()) {
             binding.editTitle.error = getString(R.string.error_title_required)
