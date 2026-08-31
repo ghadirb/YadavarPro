@@ -19,15 +19,17 @@ object AIBackendClient {
     private const val CONNECT_TIMEOUT_MS = 20_000
     private const val READ_TIMEOUT_MS = 60_000
 
+    private fun routeFor(path: String): String = when (path) {
+        "/ai/chat" -> "aiChat"
+        "/ai/stt" -> "aiStt"
+        "/ai/tts" -> "aiTts"
+        else -> path.trim('/').replace('/', '_')
+    }
+
     private fun endpoint(path: String): String {
         val root = BuildConfig.AI_BACKEND_URL.trimEnd('/')
         return if (root.contains("script.google.com", ignoreCase = true)) {
-            val route = when (path) {
-                "/ai/chat" -> "aiChat"
-                "/ai/stt" -> "aiStt"
-                "/ai/tts" -> "aiTts"
-                else -> path.trim('/').replace('/', '_')
-            }
+            val route = routeFor(path)
             root + if (root.contains("?")) "&path=$route" else "?path=$route"
         } else {
             root + path
@@ -65,6 +67,7 @@ object AIBackendClient {
         runCatching {
             val connection = open(context, "/ai/chat") ?: run { lastError = "AI_BACKEND_URL not configured"; return@runCatching null }
             val body = JSONObject()
+                .put("path", routeFor("/ai/chat"))
                 .put("deviceId", PreferencesManager(context).getOrCreateDeviceId())
                 .put("messages", messages)
                 .put("maxTokens", maxTokens)
@@ -84,33 +87,43 @@ object AIBackendClient {
     }
 
     suspend fun transcribe(context: Context, audioFile: File): String? = withContext(Dispatchers.IO) {
+        lastError = null
         runCatching {
-            val connection = open(context, "/ai/stt") ?: return@runCatching null
+            val connection = open(context, "/ai/stt") ?: run { lastError = "AI_BACKEND_URL not configured"; return@runCatching null }
             val encoded = Base64.encodeToString(audioFile.readBytes(), Base64.NO_WRAP)
             val body = JSONObject()
+                .put("path", routeFor("/ai/stt"))
                 .put("deviceId", PreferencesManager(context).getOrCreateDeviceId())
                 .put("audioBase64", encoded)
             connection.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
-            if (connection.responseCode !in 200..299) return@runCatching null
-            JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
-                .optString("text").trim().takeIf { it.isNotBlank() }
-        }.getOrNull()
+            val code = connection.responseCode
+            val stream = if (code in 200..299) connection.inputStream else connection.errorStream
+            val raw = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+            if (code !in 200..299) { lastError = "HTTP $code: $raw"; return@runCatching null }
+            val text = JSONObject(raw).optString("text").trim()
+            if (text.isBlank()) { lastError = JSONObject(raw).optString("error").ifBlank { "empty response" }; null } else text
+        }.onFailure { lastError = it.message ?: it.javaClass.simpleName }.getOrNull()
     }
 
     suspend fun synthesize(context: Context, text: String): File? = withContext(Dispatchers.IO) {
+        lastError = null
         runCatching {
-            val connection = open(context, "/ai/tts") ?: return@runCatching null
+            val connection = open(context, "/ai/tts") ?: run { lastError = "AI_BACKEND_URL not configured"; return@runCatching null }
             val body = JSONObject()
+                .put("path", routeFor("/ai/tts"))
                 .put("deviceId", PreferencesManager(context).getOrCreateDeviceId())
                 .put("text", text)
             connection.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
-            if (connection.responseCode !in 200..299) return@runCatching null
-            val encoded = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
-                .optString("audioBase64").takeIf { it.isNotBlank() } ?: return@runCatching null
+            val code = connection.responseCode
+            val stream = if (code in 200..299) connection.inputStream else connection.errorStream
+            val raw = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+            if (code !in 200..299) { lastError = "HTTP $code: $raw"; return@runCatching null }
+            val encoded = JSONObject(raw).optString("audioBase64")
+            if (encoded.isBlank()) { lastError = JSONObject(raw).optString("error").ifBlank { "empty response" }; return@runCatching null }
             File(context.cacheDir, "reminder_tts_${System.currentTimeMillis()}.mp3").also {
                 it.writeBytes(Base64.decode(encoded, Base64.DEFAULT))
                 if (it.length() == 0L) it.delete()
             }.takeIf { it.exists() && it.length() > 0 }
-        }.getOrNull()
+        }.onFailure { lastError = it.message ?: it.javaClass.simpleName }.getOrNull()
     }
 }
