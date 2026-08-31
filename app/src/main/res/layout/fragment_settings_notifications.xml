@@ -155,6 +155,22 @@
             android:layout_height="wrap_content"
             android:text="@string/bg_enable" />
 
+        <Button
+            android:id="@+id/button_exact_alarm"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/exact_alarm_button" />
+
+        <Button
+            android:id="@+id/button_battery_opt"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="@string/battery_opt_button" />
+
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

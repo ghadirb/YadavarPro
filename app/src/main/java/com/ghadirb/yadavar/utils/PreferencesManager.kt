@@ -116,6 +116,11 @@ class PreferencesManager(context: Context) {
         prefs.edit().putString(KEY_LAST_STORE_CHANNEL, channel).apply()
     }
 
+    fun hasAskedBatteryOptimization(): Boolean = prefs.getBoolean(KEY_ASKED_BATTERY_OPT, false)
+    fun setAskedBatteryOptimization() {
+        prefs.edit().putBoolean(KEY_ASKED_BATTERY_OPT, true).apply()
+    }
+
     companion object {
         private const val PREFS = "yadavar_settings"
         private const val KEY_DEVICE_ID = "device_id"
@@ -126,6 +131,7 @@ class PreferencesManager(context: Context) {
         private const val KEY_QUOTA_NOTIFIED = "quota_exhausted_notified"
         private const val KEY_EXPIRY_REMINDER_SCHEDULED_FOR = "expiry_reminder_scheduled_for"
         private const val KEY_LAST_STORE_CHANNEL = "last_store_channel"
+        private const val KEY_ASKED_BATTERY_OPT = "asked_battery_optimization"
         private const val KEY_QH_ENABLED = "quiet_hours_enabled"
         private const val KEY_QH_START = "quiet_hours_start"
         private const val KEY_QH_END = "quiet_hours_end"

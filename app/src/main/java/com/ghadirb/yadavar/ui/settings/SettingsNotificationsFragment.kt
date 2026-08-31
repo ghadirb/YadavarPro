@@ -15,6 +15,7 @@ import com.ghadirb.yadavar.services.YadavarBackgroundService
 import com.ghadirb.yadavar.ui.reminders.RemindersViewModel
 import com.ghadirb.yadavar.utils.QuietHoursManager
 import com.ghadirb.yadavar.utils.QuietMode
+import com.ghadirb.yadavar.utils.ReliabilityHelper
 
 class SettingsNotificationsFragment : Fragment() {
 
@@ -48,6 +49,7 @@ class SettingsNotificationsFragment : Fragment() {
             viewModel.prefs.setBackgroundServiceEnabled(checked)
             if (checked) YadavarBackgroundService.start(requireContext()) else YadavarBackgroundService.stop(requireContext())
         }
+        bindReliabilityButtons()
         binding.radioNotifNone.setOnClickListener { viewModel.prefs.setNotificationMode("none") }
         binding.radioNotifSimple.setOnClickListener { viewModel.prefs.setNotificationMode("simple") }
         binding.radioNotifAction.setOnClickListener { viewModel.prefs.setNotificationMode("action") }
@@ -106,6 +108,25 @@ class SettingsNotificationsFragment : Fragment() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             startActivity(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS))
         }
+    }
+
+    private fun bindReliabilityButtons() {
+        fun refresh() {
+            val exactOk = ReliabilityHelper.canScheduleExactAlarms(requireContext())
+            val batteryOk = ReliabilityHelper.isIgnoringBatteryOptimizations(requireContext())
+            binding.buttonExactAlarm.isEnabled = !exactOk
+            binding.buttonExactAlarm.text = if (exactOk) getString(com.ghadirb.yadavar.R.string.reliability_ok) else getString(com.ghadirb.yadavar.R.string.exact_alarm_button)
+            binding.buttonBatteryOpt.isEnabled = !batteryOk
+            binding.buttonBatteryOpt.text = if (batteryOk) getString(com.ghadirb.yadavar.R.string.reliability_ok) else getString(com.ghadirb.yadavar.R.string.battery_opt_button)
+        }
+        refresh()
+        binding.buttonExactAlarm.setOnClickListener { ReliabilityHelper.openExactAlarmSettings(requireContext()) }
+        binding.buttonBatteryOpt.setOnClickListener { ReliabilityHelper.openBatteryOptimizationSettings(requireContext()) }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (_binding != null) bindReliabilityButtons()
     }
 
     override fun onDestroyView() {

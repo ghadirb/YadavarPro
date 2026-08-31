@@ -19,8 +19,10 @@ import androidx.core.app.NotificationCompat
 import com.ghadirb.yadavar.R
 import com.ghadirb.yadavar.YadavarApplication
 import com.ghadirb.yadavar.ui.reminders.FullScreenAlarmActivity
+import com.ghadirb.yadavar.utils.AIBackendClient
 import com.ghadirb.yadavar.utils.AIHelper
 import com.ghadirb.yadavar.utils.PreferencesManager
+import com.ghadirb.yadavar.utils.SubscriptionManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -67,17 +69,34 @@ class SmartReminderTtsService : Service() {
         speakJob?.cancel()
         speakJob = scope.launch {
             val fallback = if (description.isBlank()) "یادآوری: $title" else "یادآوری: $title. $description"
+            // Personal key -> call the provider directly (AIHelper). Otherwise this is the
+            // shared/free tier and MUST go through AIBackendClient (server-side proxy) - the
+            // old direct-AIHelper-only path here silently returned null for every user
+            // without a personal key once local hosted-key provisioning was removed, which is
+            // why "smart" reminders stopped speaking anything but the on-device TTS fallback.
+            val hasPersonalKey = SubscriptionManager.hasPersonalKey(this@SmartReminderTtsService)
             val natural = runCatching {
                 kotlinx.coroutines.withTimeoutOrNull(4000L) {
-                    AIHelper.generateText(
-                        this@SmartReminderTtsService,
-                        "یک جمله کوتاه محاوره‌ای فارسی برای یادآوری صوتی بساز. فقط همان جمله را بنویس.",
-                        "عنوان: $title" + if (description.isNotBlank()) "\nتوضیح: $description" else ""
-                    )
+                    if (hasPersonalKey) {
+                        AIHelper.generateText(
+                            this@SmartReminderTtsService,
+                            "یک جمله کوتاه محاوره‌ای فارسی برای یادآوری صوتی بساز. فقط همان جمله را بنویس.",
+                            "عنوان: $title" + if (description.isNotBlank()) "\nتوضیح: $description" else ""
+                        )
+                    } else {
+                        val messages = org.json.JSONArray().apply {
+                            put(org.json.JSONObject().put("role", "system").put("content", "یک جمله کوتاه محاوره‌ای فارسی برای یادآوری صوتی بساز. فقط همان جمله را بنویس."))
+                            put(org.json.JSONObject().put("role", "user").put("content", "عنوان: $title" + if (description.isNotBlank()) "\nتوضیح: $description" else ""))
+                        }
+                        AIBackendClient.chat(this@SmartReminderTtsService, messages)
+                    }
                 }
             }.getOrNull()
             val textToSay = natural?.takeIf { it.isNotBlank() } ?: fallback
-            val cloud = runCatching { AIHelper.synthesizeSpeech(this@SmartReminderTtsService, textToSay) }.getOrNull()
+            val cloud = runCatching {
+                if (hasPersonalKey) AIHelper.synthesizeSpeech(this@SmartReminderTtsService, textToSay)
+                else AIBackendClient.synthesize(this@SmartReminderTtsService, textToSay)
+            }.getOrNull()
             requestAlarmAudioFocus()
             if (cloud != null) {
                 playCloud(cloud.absolutePath)

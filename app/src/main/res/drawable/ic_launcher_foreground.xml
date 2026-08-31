@@ -8,7 +8,7 @@
     <!-- Bell body, base bar and clapper, scaled/translated into the ~66dp adaptive-icon
          safe zone (launchers crop this layer to a circle/squircle/rounded-square mask that
          varies by device, so content must stay well clear of the outer edge). -->
-    <group android:translateX="4" android:translateY="2" android:scaleX="0.62" android:scaleY="0.62">
+    <group android:translateX="21.45" android:translateY="21.45" android:scaleX="0.62" android:scaleY="0.62">
         <path
             android:fillColor="#F4F1EA"
             android:pathData="M50,14 C46.7,14 44,16.7 44,20 L44,22.3 C33.6,25.1 26,34.6 26,46 L26,62 C26,66.5 23.8,70.7 20.1,73.3 L18,74.8 L18,80 L82,80 L82,74.8 L79.9,73.3 C76.2,70.7 74,66.5 74,62 L74,46 C74,34.6 66.4,25.1 56,22.3 L56,20 C56,16.7 53.3,14 50,14 Z" />

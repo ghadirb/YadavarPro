@@ -45,6 +45,15 @@
     <string name="quiet_announce">اعلان شروع و پایان سکوت</string>
     <string name="apply_system_dnd">اعمال حالت مزاحم نشوید سیستم</string>
     <string name="grant_dnd_access">اعطای دسترسی DND</string>
+    <string name="exact_alarm_title">هشدارهای دقیق</string>
+    <string name="exact_alarm_message">برای این‌که یادآوری‌ها هیچ‌وقت دیر اجرا نشن، یادآور پرو به دسترسی «هشدار و یادآوری» روی این گوشی نیاز داره.</string>
+    <string name="battery_opt_title">پایداری در پس‌زمینه</string>
+    <string name="battery_opt_message">بعضی گوشی‌ها (شیائومی، هواوی، اوپو و…) هشدار برنامه‌های تحت بهینه‌سازی باتری رو تأخیر می‌ندازن یا می‌بندن. معاف کردن یادآور پرو باعث می‌شه هشدارها سر وقت اجرا بشن.</string>
+    <string name="open_settings">باز کردن تنظیمات</string>
+    <string name="action_later">بعداً</string>
+    <string name="exact_alarm_button">دسترسی هشدار دقیق</string>
+    <string name="battery_opt_button">بهینه‌سازی باتری</string>
+    <string name="reliability_ok">قبلاً اعطا شده ✓</string>
     <string name="quiet_hours_started">ساعت سکوت شروع شد</string>
     <string name="quiet_hours_ended">ساعت سکوت تمام شد</string>
     <string name="quiet_hours_started_body">تا صبح یادآوری‌ها بی‌صدا می‌مانند.</string>

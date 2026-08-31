@@ -45,6 +45,15 @@
     <string name="quiet_announce">Announce start and end</string>
     <string name="apply_system_dnd">Also apply system Do Not Disturb</string>
     <string name="grant_dnd_access">Grant DND access</string>
+    <string name="exact_alarm_title">Precise alarms</string>
+    <string name="exact_alarm_message">To make sure reminders never fire late, Yadavar Pro needs the "Alarms &amp; reminders" permission on this phone.</string>
+    <string name="battery_opt_title">Background reliability</string>
+    <string name="battery_opt_message">Some phones (Xiaomi, Huawei, Oppo, ...) delay or kill alarms for apps under battery optimization. Exempting Yadavar Pro keeps reminders on time.</string>
+    <string name="open_settings">Open settings</string>
+    <string name="action_later">Later</string>
+    <string name="exact_alarm_button">Alarm permission</string>
+    <string name="battery_opt_button">Battery optimization</string>
+    <string name="reliability_ok">Already granted</string>
     <string name="quiet_hours_started">Quiet hours started</string>
     <string name="quiet_hours_ended">Quiet hours ended</string>
     <string name="quiet_hours_started_body">Reminders will stay silent until morning.</string>

@@ -4,12 +4,14 @@ import android.Manifest
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.ghadirb.yadavar.R
 import com.ghadirb.yadavar.assistant.AssistantFragment
 import com.ghadirb.yadavar.databinding.ActivityMainBinding
 import com.ghadirb.yadavar.dialogs.AddReminderDialog
 import com.ghadirb.yadavar.ui.reminders.RemindersFragment
+import com.ghadirb.yadavar.utils.PreferencesManager
 import com.ghadirb.yadavar.utils.QuietHoursManager
 
 class MainActivity : AppCompatActivity() {
@@ -18,6 +20,46 @@ class MainActivity : AppCompatActivity() {
 
     private val notifPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
+
+    private fun ensureReliableAlarmDelivery() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (!com.ghadirb.yadavar.utils.ReliabilityHelper.canScheduleExactAlarms(this)) {
+                // Without this OS-level permission, alarms silently fall back to an inexact
+                // AlarmManager.set(), which the system is free to delay - this is almost
+                // certainly why reminders were firing up to a minute late. Asking once, up
+                // front, is much better than a reminders app quietly being unreliable.
+                AlertDialog.Builder(this)
+                    .setTitle(R.string.exact_alarm_title)
+                    .setMessage(R.string.exact_alarm_message)
+                    .setPositiveButton(R.string.open_settings) { _, _ ->
+                        com.ghadirb.yadavar.utils.ReliabilityHelper.openExactAlarmSettings(this)
+                    }
+                    .setNegativeButton(R.string.action_later, null)
+                    .show()
+                return
+            }
+        }
+        maybeAskBatteryOptimization()
+    }
+
+    private fun maybeAskBatteryOptimization() {
+        val prefs = PreferencesManager(this)
+        if (prefs.hasAskedBatteryOptimization()) return
+        if (com.ghadirb.yadavar.utils.ReliabilityHelper.isIgnoringBatteryOptimizations(this)) return
+        prefs.setAskedBatteryOptimization()
+        // Many OEM skins (MIUI, EMUI, ColorOS, ...) kill or heavily delay background alarm
+        // delivery for apps under battery optimization, even with an exact alarm scheduled.
+        // Asked once, ever - declining doesn't nag again, but the option stays reachable
+        // from Settings -> اعلان و سکوت if they change their mind later.
+        AlertDialog.Builder(this)
+            .setTitle(R.string.battery_opt_title)
+            .setMessage(R.string.battery_opt_message)
+            .setPositiveButton(R.string.open_settings) { _, _ ->
+                com.ghadirb.yadavar.utils.ReliabilityHelper.openBatteryOptimizationSettings(this)
+            }
+            .setNegativeButton(R.string.action_later, null)
+            .show()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -29,6 +71,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         QuietHoursManager.schedule(this)
+        ensureReliableAlarmDelivery()
 
         if (savedInstanceState == null) {
             showTab(TAB_REMINDERS)
