@@ -1,6 +1,6 @@
-// Yadavar Pro Apps Script backend — version 4
+// Yadavar Pro Apps Script backend — version 5
 // After pasting this file you MUST: Deploy → Manage deployments → pencil → New version → Deploy
-// A live v4 /exec URL with no ?path= returns {"ok":true,"service":"yadavar-pro","version":4,...}
+// A live v5 /exec URL with no ?path= returns {"ok":true,"service":"yadavar-pro","version":5,...}
 // not {"error":"unknown_path"}.
 //
 // Google Apps Script version of the Maliar Pro billing backend - a free, no-hosting-
@@ -184,8 +184,8 @@ function routeRequest_(e) {
     return jsonOutput_({
       ok: true,
       service: 'yadavar-pro',
-      version: 4,
-      routes: ['status', 'request', 'callback', 'paypingCallback', 'verifyStore', 'aiChat', 'aiStt', 'aiTts'],
+      version: 5,
+      routes: ['status', 'request', 'callback', 'paypingCallback', 'verifyStore', 'aiChat', 'aiStt', 'aiTts', 'aiSmartAlert'],
       hint: 'این آدرس سالم است. اپ با ?path=status و ?path=aiChat صدا می‌زند.'
     });
   }
@@ -198,6 +198,7 @@ function routeRequest_(e) {
   if (path === 'aiChat' || path === 'chat' || path === 'ai_chat') return handleAiChat_(params);
   if (path === 'aiStt' || path === 'stt' || path === 'ai_stt') return handleAiStt_(params);
   if (path === 'aiTts' || path === 'tts' || path === 'ai_tts') return handleAiTts_(params);
+  if (path === 'aiSmartAlert' || path === 'smartAlert' || path === 'ai_smart_alert') return handleAiSmartAlert_(params);
 
   return jsonOutput_({ error: 'unknown_path', path: path });
 }
@@ -345,9 +346,54 @@ function handleAiTts_(params) {
   if (denied) return denied;
   const text = String(params.text || '').trim();
   if (!text || text.length > 4000) return jsonOutput_({ error: 'text is required' });
+  const result = synthesizeSpeech_(text);
+  if (result.error) return jsonOutput_({ error: result.error, status: result.status || 0 });
+  return jsonOutput_({ audioBase64: result.audioBase64, mimeType: 'audio/mpeg' });
+}
+
+function spokenReminderFallback_(title, description) {
+  const t = String(title || '').trim() || 'یک کار';
+  const d = String(description || '').trim();
+  return d
+    ? ('سلام، الان وقتشه که ' + t + '. ' + d)
+    : ('سلام، الان وقتشه که ' + t + '. لطفاً انجامش بده.');
+}
+
+function rewriteSpokenReminder_(title, description) {
+  const fallback = spokenReminderFallback_(title, description);
   const cfg = aiConfig_();
-  // tts-1 first: typically a few seconds. gpt-4o-mini-tts is nicer but often 15–20s,
-  // which is too slow for an alarm (the Android client rings a local sound meanwhile).
+  try {
+    const response = aiFetch_(cfg.baseUrl + '/chat/completions', {
+      apiKey: cfg.key,
+      body: {
+        model: cfg.model,
+        messages: [
+          {
+            role: 'system',
+            content: 'تو گوینده هشدار یادآور هستی. فقط یک جمله کوتاه محاوره‌ای فارسی برگردان که با صدای بلند برای کاربر خوانده شود. بدون اموجی، بدون نقل‌قول، بدون توضیح اضافه.'
+          },
+          {
+            role: 'user',
+            content: 'عنوان یادآوری: ' + title + (description ? ('\nتوضیح: ' + description) : '')
+          }
+        ],
+        max_tokens: 80,
+        temperature: 0.6
+      }
+    });
+    if (response.getResponseCode() < 200 || response.getResponseCode() >= 300) return fallback;
+    const data = JSON.parse(response.getContentText());
+    const text = data.choices && data.choices[0] && data.choices[0].message
+      ? String(data.choices[0].message.content || '').trim() : '';
+    if (!text) return fallback;
+    return text.replace(/^["'«»]+|["'«»]+$/g, '').slice(0, 220);
+  } catch (err) {
+    return fallback;
+  }
+}
+
+function synthesizeSpeech_(text) {
+  const cfg = aiConfig_();
   const models = ['tts-1', 'gpt-4o-mini-tts'];
   try {
     let lastStatus = 0;
@@ -360,17 +406,30 @@ function handleAiTts_(params) {
       if (lastStatus >= 200 && lastStatus < 300) {
         const bytes = response.getBlob().getBytes();
         if (bytes && bytes.length > 0) {
-          return jsonOutput_({
-            audioBase64: Utilities.base64Encode(bytes),
-            mimeType: 'audio/mpeg'
-          });
+          return { audioBase64: Utilities.base64Encode(bytes) };
         }
       }
     }
-    return jsonOutput_({ error: 'tts_unavailable', status: lastStatus });
+    return { error: 'tts_unavailable', status: lastStatus };
   } catch (err) {
-    return jsonOutput_({ error: 'tts_unavailable' });
+    return { error: 'tts_unavailable' };
   }
+}
+
+function handleAiSmartAlert_(params) {
+  const denied = requireAiFields_(params);
+  if (denied) return denied;
+  const title = String(params.title || '').trim();
+  const description = String(params.description || '').trim();
+  if (!title) return jsonOutput_({ error: 'title is required' });
+  const spoken = rewriteSpokenReminder_(title, description);
+  const result = synthesizeSpeech_(spoken);
+  if (result.error) return jsonOutput_({ error: result.error, status: result.status || 0, text: spoken });
+  return jsonOutput_({
+    text: spoken,
+    audioBase64: result.audioBase64,
+    mimeType: 'audio/mpeg'
+  });
 }
 
 // --- Bazaar / Myket in-app purchase verification (optional) -------------------------

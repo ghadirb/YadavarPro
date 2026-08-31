@@ -156,7 +156,8 @@
     <string name="bg_channel_desc">Silent keep-alive for reminder alarms</string>
     <string name="smart_tts_channel_name">Spoken alert playback</string>
     <string name="smart_tts_channel_desc">Keeps the spoken smart alert playing</string>
-    <string name="smart_tts_playing">Playing spoken reminder</string>
+    <string name="smart_tts_playing">Smart alert is speaking. It repeats until you tap Done.</string>
+    <string name="smart_tts_preparing">Preparing spoken smart alert…</string>
     <string name="battery_hint">On Xiaomi and Huawei, turn off battery optimization for this app so alarms are not killed.</string>
 </resources>
 

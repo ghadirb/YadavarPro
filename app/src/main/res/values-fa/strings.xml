@@ -156,7 +156,8 @@
     <string name="bg_channel_desc">اعلان کم‌صدا برای زنده ماندن زنگ‌ها</string>
     <string name="smart_tts_channel_name">پخش هشدار هوشمند</string>
     <string name="smart_tts_channel_desc">نگه‌داشتن پخش صدای هشدار هوشمند</string>
-    <string name="smart_tts_playing">در حال پخش یادآوری صوتی</string>
+    <string name="smart_tts_playing">هشدار هوشمند در حال پخش است. تا زدن «انجام شد» تکرار می‌شود.</string>
+    <string name="smart_tts_preparing">در حال ساخت جمله هوشمند…</string>
     <string name="battery_hint">روی شیائومی و هواوی، بهینه‌سازی باتری را برای این برنامه خاموش کنید تا زنگ قطع نشود.</string>
 </resources>
 

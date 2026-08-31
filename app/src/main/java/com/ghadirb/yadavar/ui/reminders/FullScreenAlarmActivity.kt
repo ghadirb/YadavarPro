@@ -31,6 +31,7 @@ class FullScreenAlarmActivity : AppCompatActivity() {
     private var wakeLock: PowerManager.WakeLock? = null
     private var reminderId: Long = -1
     private var isSmart = false
+    private var userHandled = false
 
     /** Physical swipe right = dismiss, swipe left = snooze - additive to the buttons below,
      *  not a replacement, so the alarm is always dismissible even for someone who doesn't
@@ -56,8 +57,10 @@ class FullScreenAlarmActivity : AppCompatActivity() {
                 val thresholdPx = 100 * resources.displayMetrics.density
                 if (abs(diffX) < thresholdPx || abs(velocityX) < 250) return false
                 if (diffX > 0) {
+                    userHandled = true
                     sendActionBroadcast(ReminderActionReceiver.ACTION_DONE)
                 } else {
+                    userHandled = true
                     sendActionBroadcast(ReminderActionReceiver.ACTION_SNOOZE)
                 }
                 finish()
@@ -84,11 +87,27 @@ class FullScreenAlarmActivity : AppCompatActivity() {
         reminderId = intent.getLongExtra("reminder_id", -1)
         val titleExtra = intent.getStringExtra("reminder_title")
         val descExtra = intent.getStringExtra("reminder_description")
+        val spokenExtra = intent.getStringExtra("spoken_text")
         isSmart = intent.getStringExtra("alert_type") == "SMART"
         binding.textTitle.text = titleExtra.orEmpty()
         binding.textDescription.text = descExtra.orEmpty()
-        binding.textHint.text = if (isSmart) getString(com.ghadirb.yadavar.R.string.alert_smart) else getString(com.ghadirb.yadavar.R.string.alert_full_screen)
+        binding.textHint.text = if (isSmart) getString(com.ghadirb.yadavar.R.string.smart_tts_playing) else getString(com.ghadirb.yadavar.R.string.alert_full_screen)
         binding.textHint.visibility = android.view.View.VISIBLE
+        if (isSmart) {
+            val spoken = spokenExtra?.takeIf { it.isNotBlank() }
+                ?: SmartReminderTtsService.currentSpokenText(reminderId).ifBlank {
+                    SmartReminderTtsService.spokenTemplate(titleExtra.orEmpty(), descExtra.orEmpty())
+                }
+            binding.textDescription.text = spoken
+            SmartReminderTtsService.spokenTextListener = { id, text ->
+                if (id == reminderId && text.isNotBlank()) {
+                    runOnUiThread {
+                        binding.textDescription.text = text
+                        binding.textHint.text = getString(com.ghadirb.yadavar.R.string.smart_tts_playing)
+                    }
+                }
+            }
+        }
         @Suppress("ClickableViewAccessibility")
         binding.root.setOnTouchListener { _, event -> gestureDetector.onTouchEvent(event) }
 
@@ -96,7 +115,9 @@ class FullScreenAlarmActivity : AppCompatActivity() {
             val reminder = AppDatabase.getInstance(applicationContext).reminderDao().getById(reminderId)
             if (reminder != null) {
                 binding.textTitle.text = reminder.title
-                binding.textDescription.text = reminder.description
+                if (!isSmart) {
+                    binding.textDescription.text = reminder.description
+                }
                 val mute = QuietHoursManager.shouldMuteSound(PreferencesManager(this@FullScreenAlarmActivity), reminder)
                 if (!isSmart && !mute) playSound(reminder.soundUri)
                 if (mute && QuietHoursManager.vibrateOnly(PreferencesManager(this@FullScreenAlarmActivity), reminder)) {
@@ -119,10 +140,12 @@ class FullScreenAlarmActivity : AppCompatActivity() {
         runCatching { wakeLock?.acquire(10 * 60 * 1000L) }
 
         binding.buttonDismiss.setOnClickListener {
+            userHandled = true
             sendActionBroadcast(ReminderActionReceiver.ACTION_DONE)
             finish()
         }
         binding.buttonSnooze.setOnClickListener {
+            userHandled = true
             sendActionBroadcast(ReminderActionReceiver.ACTION_SNOOZE)
             finish()
         }
@@ -170,7 +193,9 @@ class FullScreenAlarmActivity : AppCompatActivity() {
         runCatching { if (wakeLock?.isHeld == true) wakeLock?.release() }
         wakeLock = null
         getSystemService(Vibrator::class.java)?.cancel()
-        if (reminderId > 0) SmartReminderTtsService.stop(reminderId)
+        // Keep the spoken loop running if the user just left the screen (Home, recents).
+        // Only stop TTS when they actually dismiss or snooze.
+        if (userHandled && reminderId > 0) SmartReminderTtsService.stop(reminderId)
     }
 
     @Deprecated("Deprecated in Java")
@@ -179,6 +204,9 @@ class FullScreenAlarmActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        if (SmartReminderTtsService.spokenTextListener != null) {
+            SmartReminderTtsService.spokenTextListener = null
+        }
         super.onDestroy()
         if (isChangingConfigurations) return
         stopAlarm()

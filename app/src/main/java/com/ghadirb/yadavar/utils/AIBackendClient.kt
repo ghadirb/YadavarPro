@@ -33,6 +33,7 @@ object AIBackendClient {
         "/ai/chat" -> "aiChat"
         "/ai/stt" -> "aiStt"
         "/ai/tts" -> "aiTts"
+        "/ai/smartAlert" -> "aiSmartAlert"
         else -> path.trim('/').replace('/', '_')
     }
 
@@ -221,4 +222,54 @@ object AIBackendClient {
             }.takeIf { it.exists() && it.length() >= 64L }
         }.onFailure { lastError = it.message ?: it.javaClass.simpleName }.getOrNull()
     }
+
+    data class SmartAlertAudio(val text: String, val file: File)
+
+    /**
+     * One round-trip: rewrite the reminder as a spoken Persian sentence and return MP3.
+     * Returns null if the deployed script is still v4 (unknown_path) so the client can
+     * fall back to chat + tts separately.
+     */
+    suspend fun smartAlert(context: Context, title: String, description: String): SmartAlertAudio? =
+        withContext(Dispatchers.IO) {
+            lastError = null
+            runCatching {
+                val extra = mapOf(
+                    "title" to title.take(120),
+                    "description" to description.take(160)
+                )
+                val (code, raw) = if (isAppsScript()) {
+                    getJson(context, "/ai/smartAlert", extra)
+                } else {
+                    val body = JSONObject()
+                        .put("path", routeFor("/ai/smartAlert"))
+                        .put("deviceId", PreferencesManager(context).getOrCreateDeviceId())
+                        .put("title", title.take(120))
+                        .put("description", description.take(160))
+                    postJson(context, "/ai/smartAlert", body)
+                }
+                if (code !in 200..299) {
+                    lastError = "HTTP $code: ${raw.take(180)}"
+                    return@runCatching null
+                }
+                val json = JSONObject(raw)
+                val err = json.optString("error")
+                if (err == "unknown_path") {
+                    lastError = "unknown_path"
+                    return@runCatching null
+                }
+                val spoken = json.optString("text").trim()
+                val encoded = json.optString("audioBase64")
+                if (encoded.isBlank()) {
+                    lastError = explain(err.ifBlank { "empty response" })
+                    return@runCatching null
+                }
+                val file = File(context.cacheDir, "reminder_tts_${System.currentTimeMillis()}.mp3").also {
+                    it.writeBytes(Base64.decode(encoded, Base64.DEFAULT))
+                    if (it.length() < 64L) it.delete()
+                }
+                if (!file.exists() || file.length() < 64L) return@runCatching null
+                SmartAlertAudio(spoken.ifBlank { title }, file)
+            }.onFailure { lastError = it.message ?: it.javaClass.simpleName }.getOrNull()
+        }
 }
