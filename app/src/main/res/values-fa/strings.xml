@@ -77,7 +77,7 @@
     <string name="nav_reminders">یادآوری‌ها</string>
     <string name="nav_assistant">دستیار</string>
     <string name="assistant_title">دستیار یادآوری</string>
-    <string name="assistant_hint">۶ و ۴۲ دقیقه صبح دارو بخور</string>
+    <string name="assistant_hint">رفتن بعد از ۴۰ دقیقه / قرص هر هشت ساعت</string>
     <string name="assistant_send">ارسال</string>
     <string name="assistant_chip_today">امروز</string>
     <string name="assistant_chip_tomorrow">۶ و ۴۲ صبح</string>

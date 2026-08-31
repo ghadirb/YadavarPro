@@ -37,8 +37,9 @@ data class ParsedTime(val hour: Int, val minute: Int, val found: Boolean)
 
 /**
  * On-device Persian parser. Understands minutes ("۶ و ۴۲ دقیقه"), weekday ranges
- * ("شنبه تا چهارشنبه") and refuses everyday chat so hosted API keys are only spent
- * on reminder work.
+ * ("شنبه تا چهارشنبه"), relative offsets ("بعد از ۴۰ دقیقه"، "نیم ساعت بعد")
+ * and sub-day intervals ("هر هشت ساعت") so hosted API keys are only spent
+ * when the phrase is genuinely ambiguous.
  */
 object ReminderNlp {
 
@@ -62,7 +63,8 @@ object ReminderNlp {
         "شش" to 6, "هفت" to 7, "هشت" to 8, "نه" to 9, "ده" to 10,
         "یازده" to 11, "دوازده" to 12, "سیزده" to 13, "چهارده" to 14, "پانزده" to 15,
         "شانزده" to 16, "هفده" to 17, "هجده" to 18, "نوزده" to 19,
-        "بیست" to 20, "سی" to 30, "چهل" to 40, "پنجاه" to 50
+        "بیست" to 20, "سی" to 30, "چهل" to 40, "پنجاه" to 50,
+        "شصت" to 60, "هفتاد" to 70, "هشتاد" to 80, "نود" to 90
     )
 
     private val OFF_TOPIC = listOf(
@@ -118,7 +120,8 @@ object ReminderNlp {
             "ساعت", "دقیقه", "فردا", "پس فردا", "امروز", "امشب",
             "شنبه", "یکشنبه", "دوشنبه", "سه شنبه", "سه‌شنبه", "چهارشنبه",
             "پنجشنبه", "جمعه", "هر روز", "هفتگی", "ماهانه",
-            "دارو", "قرص", "جلسه", "قرار", "قبض", "ورزش", "تولد", "صبح", "ظهر", "عصر"
+            "دارو", "قرص", "جلسه", "قرار", "قبض", "ورزش", "تولد", "صبح", "ظهر", "عصر",
+            "بعد از", "نیم ساعت", "ربع ساعت", "دیگه", "دیگر"
         )
         return keys.any { n.contains(it) }
     }
@@ -133,6 +136,7 @@ object ReminderNlp {
                 n.contains("پس فردا") || n.contains("هر روز") || n.contains("هرروز") ||
                 n.contains("دقیقه") || n.contains("صبح") || n.contains("ظهر") ||
                 n.contains("عصر") || n.contains("شب") ||
+                n.contains("بعد از") || n.contains("نیم ساعت") || n.contains("ربع ساعت") ||
                 WEEKDAY_INDEX.keys.any { n.contains(it) } ||
                 n.contains("قرص") || n.contains("دارو") || n.contains("جلسه") ||
                 n.contains("قرار") || n.contains("قبض") || n.contains("ورزش") ||
@@ -140,18 +144,13 @@ object ReminderNlp {
             )
         if (!looksLikeCreate) return null
 
-        // "هر ۸ ساعت" / "هر نیم ساعت" (every N hours/minutes) is a distinct pattern from
-        // "ساعت ۸" (at clock-hour 8) - distinguished by the "هر" prefix coming before the
-        // number, so it can't be confused with a specific time-of-day.
         val worded = replaceNumberWords(n)
-        val hourInterval = Regex("""هر\s*(\d{1,3})\s*ساعت""").find(worded)?.groupValues?.get(1)?.toIntOrNull() ?: 0
-        val minuteInterval = if (hourInterval == 0) {
-            Regex("""هر\s*(\d{1,3})\s*دقیقه""").find(worded)?.groupValues?.get(1)?.toIntOrNull() ?: 0
-        } else 0
-        val subDayIntervalMinutes = hourInterval * 60 + minuteInterval
+        val subDayIntervalMinutes = parseSubDayIntervalMinutes(worded)
         val hasSubDayInterval = subDayIntervalMinutes > 0
+        val relativeMinutes = if (hasSubDayInterval) 0 else (parseRelativeOffsetMinutes(n) ?: 0)
+        val hasRelative = relativeMinutes > 0
 
-        val dayInterval = Regex("""هر\s*(\d{1,2})\s*روز""").find(n)?.groupValues?.get(1)?.toIntOrNull() ?: 0
+        val dayInterval = Regex("""هر\s*(\d{1,2})\s*روز""").find(worded)?.groupValues?.get(1)?.toIntOrNull() ?: 0
         val dateShift = when {
             n.contains("پس فردا") || n.contains("پسفردا") -> 2
             n.contains("فردا") -> 1
@@ -159,17 +158,20 @@ object ReminderNlp {
         }
 
         // If nothing here actually anchors a time (no clock time, no weekday, no "tomorrow"/
-        // "tonight", no day/hour/minute interval), silently defaulting to 9:00 would just be
-        // a guess presented as a fact. Better to admit defeat here so parse() falls through to
-        // looksLikeReminderTalk() -> ReminderQuestion -> the cloud AI fallback, which can ask
-        // a genuinely ambiguous phrase to be clarified instead of committing to a wrong time.
+        // "tonight", no day/hour/minute interval, no "in N minutes"), silently defaulting to
+        // 9:00 would just be a guess presented as a fact. Better to admit defeat here so
+        // parse() falls through to ReminderQuestion -> the cloud AI fallback.
         val hasTemporalSignal = time?.found == true || weekdays.isNotEmpty() || dateShift > 0 ||
-            n.contains("امشب") || dayInterval > 0 || hasSubDayInterval
+            n.contains("امشب") || dayInterval > 0 || hasSubDayInterval || hasRelative
         if (!hasTemporalSignal) return null
 
         val cal = Calendar.getInstance()
 
-        if (hasSubDayInterval && time?.found != true) {
+        if (hasRelative && time?.found != true) {
+            cal.add(Calendar.MINUTE, relativeMinutes)
+            cal.set(Calendar.SECOND, 0)
+            cal.set(Calendar.MILLISECOND, 0)
+        } else if (hasSubDayInterval && time?.found != true) {
             // "از الان هر ۸ ساعت ..." - no explicit clock time was given alongside the
             // interval, so the natural reading is "starting now, every N hours/minutes".
             cal.add(Calendar.MINUTE, subDayIntervalMinutes)
@@ -319,6 +321,85 @@ object ReminderNlp {
         return null
     }
 
+    /**
+     * "هر ۸ ساعت" / "هر نیم ساعت" / "هر ۳۰ دقیقه". Distinct from "ساعت ۸"
+     * because of the leading "هر".
+     */
+    internal fun parseSubDayIntervalMinutes(worded: String): Int {
+        Regex("""هر\s*نیم\s*ساعت""").find(worded)?.let { return 30 }
+        Regex("""هر\s*سه\s*ربع(?:\s*ساعت)?""").find(worded)?.let { return 45 }
+        Regex("""هر\s*ربع\s*ساعت""").find(worded)?.let { return 15 }
+        Regex("""هر\s*(\d{1,3})\s*ساعت\s*و\s*نیم""").find(worded)?.let {
+            return it.groupValues[1].toInt() * 60 + 30
+        }
+        Regex("""هر\s*(\d{1,3})\s*ساعت\s*و\s*(\d{1,2})\s*دقیقه""").find(worded)?.let {
+            return it.groupValues[1].toInt() * 60 + it.groupValues[2].toInt()
+        }
+        Regex("""هر\s*(\d{1,3})\s*ساعت""").find(worded)?.let {
+            val hours = it.groupValues[1].toInt()
+            if (hours in 1..48) return hours * 60
+        }
+        Regex("""هر\s*(\d{1,3})\s*دقیقه""").find(worded)?.let {
+            val minutes = it.groupValues[1].toInt()
+            if (minutes in 1..24 * 60) return minutes
+        }
+        if (Regex("""هر\s*ساعت(?!\s*\d)""").containsMatchIn(worded) &&
+            !worded.contains("هر ساعت و")
+        ) {
+            return 60
+        }
+        return 0
+    }
+
+    /**
+     * One-shot relative offset from now: "بعد از ۴۰ دقیقه"، "نیم ساعت بعد"،
+     * "یه ساعت دیگه". Requires a relative cue so "ساعت ۸ جلسه" is not +8 hours.
+     */
+    internal fun parseRelativeOffsetMinutes(n: String): Int? {
+        val worded = replaceNumberWords(n)
+        val hasCue = worded.contains("بعد") || worded.contains("دیگه") ||
+            worded.contains("دیگر") || worded.contains("از الان") ||
+            worded.contains("از الآن")
+        if (!hasCue) return null
+
+        Regex("""(?:بعد\s*(?:از\s*)?)?(\d{1,2})\s*ساعت\s*و\s*نیم""").find(worded)?.let {
+            return it.groupValues[1].toInt() * 60 + 30
+        }
+        Regex("""(?:بعد\s*(?:از\s*)?)?(\d{1,3})\s*ساعت\s*و\s*(\d{1,2})\s*دقیقه""").find(worded)?.let {
+            return it.groupValues[1].toInt() * 60 + it.groupValues[2].toInt()
+        }
+        Regex("""(?:بعد\s*(?:از\s*)?)?نیم\s*ساعت""").find(worded)?.let { return 30 }
+        Regex("""(?:بعد\s*(?:از\s*)?)?سه\s*ربع(?:\s*ساعت)?""").find(worded)?.let { return 45 }
+        Regex("""(?:بعد\s*(?:از\s*)?)?ربع\s*ساعت""").find(worded)?.let { return 15 }
+
+        Regex("""بعد\s*(?:از\s*)?(\d{1,3})\s*دقیقه""").find(worded)?.let {
+            val minutes = it.groupValues[1].toInt()
+            if (minutes in 1..24 * 60) return minutes
+        }
+        Regex("""(\d{1,3})\s*دقیقه\s*(?:بعد|دیگه|دیگر|از\s*الان)""").find(worded)?.let {
+            val minutes = it.groupValues[1].toInt()
+            if (minutes in 1..24 * 60) return minutes
+        }
+        Regex("""از\s*الان\s*(\d{1,3})\s*دقیقه""").find(worded)?.let {
+            val minutes = it.groupValues[1].toInt()
+            if (minutes in 1..24 * 60) return minutes
+        }
+
+        Regex("""بعد\s*(?:از\s*)?(\d{1,3})\s*ساعت""").find(worded)?.let {
+            val hours = it.groupValues[1].toInt()
+            if (hours in 1..48) return hours * 60
+        }
+        Regex("""(\d{1,3})\s*ساعت\s*(?:بعد|دیگه|دیگر)""").find(worded)?.let {
+            val hours = it.groupValues[1].toInt()
+            if (hours in 1..48) return hours * 60
+        }
+        Regex("""از\s*الان\s*(\d{1,3})\s*ساعت""").find(worded)?.let {
+            val hours = it.groupValues[1].toInt()
+            if (hours in 1..48) return hours * 60
+        }
+        return null
+    }
+
     internal fun parseWeekdays(n: String): Set<Int> {
         val rangeMatch = Regex(
             """(?:از\s*)?(شنبه|یکشنبه|یک شنبه|دوشنبه|دو شنبه|سه شنبه|سه‌شنبه|چهارشنبه|چهار شنبه|پنجشنبه|پنج شنبه|جمعه)\s*تا\s*(شنبه|یکشنبه|یک شنبه|دوشنبه|دو شنبه|سه شنبه|سه‌شنبه|چهارشنبه|چهار شنبه|پنجشنبه|پنج شنبه|جمعه)"""
@@ -366,16 +447,17 @@ object ReminderNlp {
         }
     }
 
-    private fun replaceNumberWords(text: String): String {
+    internal fun replaceNumberWords(text: String): String {
         var t = text
-        val compound = Regex("""(بیست|سی|چهل|پنجاه)\s*و\s*(یک|دو|سه|چهار|پنج|شش|هفت|هشت|نه)""")
+        t = t.replace(Regex("""(?<![آ-ی])یه(?![آ-ی])"""), "1")
+        val compound = Regex("""(بیست|سی|چهل|پنجاه|شصت|هفتاد|هشتاد|نود)\s*و\s*(یک|دو|سه|چهار|پنج|شش|هفت|هشت|نه)""")
         t = compound.replace(t) { m ->
             val tens = NUMBER_WORDS[m.groupValues[1]] ?: 0
             val ones = NUMBER_WORDS[m.groupValues[2]] ?: 0
             (tens + ones).toString()
         }
         NUMBER_WORDS.entries.sortedByDescending { it.key.length }.forEach { (word, num) ->
-            t = t.replace(word, num.toString())
+            t = t.replace(Regex("(?<![آ-ی])${Regex.escape(word)}(?![آ-ی])"), num.toString())
         }
         return t
     }
@@ -383,18 +465,28 @@ object ReminderNlp {
     private fun extractTitle(original: String, n: String): String {
         var t = n
         listOf(
-            "یادت باشه", "یادم باشه", "یک یادآوری", "یه یادآوری", "یادآوری کن",
-            "یادآوری", "آلارم", "بذار", "ثبت کن", "بخور"
+            "یادت باشه", "یادم باشه", "یک یادآوری", "یه یادآوری",
+            "یادآوری کن", "یادآوری", "آلارم", "بذار", "ثبت کن", "بخور"
         ).forEach { token ->
             t = t.replace(token, " ", ignoreCase = true)
         }
+        val num = """(?:\d{1,3}|نیم|ربع|سه\s*ربع|یه|یک|دو|سه|چهار|پنج|شش|هفت|هشت|نه|ده|یازده|دوازده|سیزده|چهارده|پانزده|شانزده|هفده|هجده|نوزده|بیست|سی|چهل|پنجاه|شصت|هفتاد|هشتاد|نود)(?:\s*و\s*(?:یک|دو|سه|چهار|پنج|شش|هفت|هشت|نه|\d{1,2}))?"""
+        t = t.replace(Regex("""بعد\s*(?:از\s*)?$num\s*ساعت\s*و\s*(?:نیم|$num\s*دقیقه)"""), " ")
+        t = t.replace(Regex("""بعد\s*(?:از\s*)?(?:نیم|ربع|سه\s*ربع)\s*ساعت"""), " ")
+        t = t.replace(Regex("""بعد\s*(?:از\s*)?$num\s*(ساعت|دقیقه)"""), " ")
+        t = t.replace(Regex("""$num\s*ساعت\s*و\s*(?:نیم|$num\s*دقیقه)\s*(بعد|دیگه|دیگر)"""), " ")
+        t = t.replace(Regex("""(?:نیم|ربع|سه\s*ربع)\s*ساعت\s*(بعد|دیگه|دیگر)"""), " ")
+        t = t.replace(Regex("""$num\s*(ساعت|دقیقه)\s*(بعد|دیگه|دیگر)"""), " ")
+        t = t.replace(Regex("""هر\s*(?:نیم|ربع|سه\s*ربع|$num)\s*(ساعت|دقیقه|روز)"""), " ")
+        t = t.replace(Regex("""هر\s*ساعت"""), " ")
         t = t.replace(Regex("""ساعت\s*\d{1,2}(\s*و\s*\d{1,2}\s*(دقیقه)?)?([:\.]\d{2})?"""), " ")
         t = t.replace(Regex("""\d{1,2}\s*و\s*\d{1,2}\s*(دقیقه)?"""), " ")
-        t = t.replace(Regex("""هر\s*\d{1,3}\s*(ساعت|دقیقه|روز)"""), " ")
-        t = t.replace(Regex("""(پس\s*فردا|فردا|امروز|امشب|هر روز|هرروز|روزانه|هر هفته|هفتگی|هر ماه|ماهانه|صبح|ظهر|عصر|شب|از الان)"""), " ")
+        t = t.replace(Regex("""(پس\s*فردا|فردا|امروز|امشب|هر روز|هرروز|روزانه|هر هفته|هفتگی|هر ماه|ماهانه|صبح|ظهر|عصر|شب|از الان|از الآن)"""), " ")
         t = t.replace(Regex("""(از\s*)?(شنبه|یکشنبه|دوشنبه|سه‌شنبه|سه شنبه|چهارشنبه|پنجشنبه|جمعه|تا)"""), " ")
         t = t.replace(Regex("""\s+"""), " ").trim()
+        t = t.removePrefix("برای ").trim()
         t = t.removeSuffix(" کن").trim()
+        t = t.removeSuffix(" بده").trim()
         return t.ifBlank { original.trim() }
     }
 

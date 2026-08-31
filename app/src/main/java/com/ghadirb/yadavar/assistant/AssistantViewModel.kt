@@ -137,38 +137,59 @@ class AssistantViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun createFromJson(json: JSONObject, fallbackTitle: String): AssistantIntent.Create? {
         val title = json.optString("title").ifBlank { fallbackTitle }
-        val hour = json.optInt("hour", 9).coerceIn(0, 23)
-        val minute = json.optInt("minute", 0).coerceIn(0, 59)
+        val intervalMinutes = json.optInt("intervalMinutes", 0).let { minutes ->
+            if (minutes > 0) minutes else json.optInt("intervalHours", 0) * 60
+        }
+        val plusMinutes = json.optInt("plusMinutes", 0).let { requested ->
+            if (requested > 0) requested else intervalMinutes
+        }
         val cal = Calendar.getInstance()
+        if (plusMinutes > 0) {
+            cal.add(Calendar.MINUTE, plusMinutes)
+            cal.set(Calendar.SECOND, 0)
+            cal.set(Calendar.MILLISECOND, 0)
+        } else {
+            val hour = json.optInt("hour", 9).coerceIn(0, 23)
+            val minute = json.optInt("minute", 0).coerceIn(0, 59)
+            val daysArr = json.optJSONArray("days")
+            val days = mutableSetOf<Int>()
+            if (daysArr != null) {
+                for (i in 0 until daysArr.length()) days.add(daysArr.optInt(i))
+            }
+            if (days.isNotEmpty()) {
+                var guard = 0
+                fun idx() = cal.get(Calendar.DAY_OF_WEEK) - Calendar.SUNDAY
+                while (idx() !in days && guard < 8) {
+                    cal.add(Calendar.DAY_OF_YEAR, 1)
+                    guard++
+                }
+            } else if (json.optInt("plusDays", 0) > 0) {
+                cal.add(Calendar.DAY_OF_YEAR, json.optInt("plusDays"))
+            }
+            cal.set(Calendar.HOUR_OF_DAY, hour)
+            cal.set(Calendar.MINUTE, minute)
+            cal.set(Calendar.SECOND, 0)
+            cal.set(Calendar.MILLISECOND, 0)
+            if (cal.timeInMillis < System.currentTimeMillis() - 30_000) cal.add(Calendar.DAY_OF_YEAR, 1)
+        }
         val daysArr = json.optJSONArray("days")
         val days = mutableSetOf<Int>()
         if (daysArr != null) {
             for (i in 0 until daysArr.length()) days.add(daysArr.optInt(i))
         }
-        if (days.isNotEmpty()) {
-            var guard = 0
-            fun idx() = cal.get(Calendar.DAY_OF_WEEK) - Calendar.SUNDAY
-            while (idx() !in days && guard < 8) {
-                cal.add(Calendar.DAY_OF_YEAR, 1)
-                guard++
-            }
-        } else if (json.optInt("plusDays", 0) > 0) {
-            cal.add(Calendar.DAY_OF_YEAR, json.optInt("plusDays"))
-        }
-        cal.set(Calendar.HOUR_OF_DAY, hour)
-        cal.set(Calendar.MINUTE, minute)
-        cal.set(Calendar.SECOND, 0)
-        cal.set(Calendar.MILLISECOND, 0)
-        if (cal.timeInMillis < System.currentTimeMillis() - 30_000) cal.add(Calendar.DAY_OF_YEAR, 1)
         val repeatName = json.optString("repeat", "ONCE")
-        val repeat = runCatching { RepeatPattern.valueOf(repeatName) }.getOrDefault(
-            if (days.size >= 2) RepeatPattern.CUSTOM else RepeatPattern.ONCE
-        )
+        val repeat = when {
+            intervalMinutes > 0 -> RepeatPattern.CUSTOM_INTERVAL
+            else -> runCatching { RepeatPattern.valueOf(repeatName) }.getOrDefault(
+                if (days.size >= 2) RepeatPattern.CUSTOM else RepeatPattern.ONCE
+            )
+        }
         return AssistantIntent.Create(
             title = title,
             triggerAt = cal.timeInMillis,
             repeat = repeat,
-            category = json.optString("category").ifBlank { "عمومی" },
+            category = json.optString("category").ifBlank { ReminderNlp.inferCategory(title) },
+            intervalMinutes = intervalMinutes,
             customDays = days.sorted().joinToString(","),
             alertType = json.optString("alertType").ifBlank { "NOTIFICATION" }
         )
@@ -255,10 +276,12 @@ class AssistantViewModel(app: Application) : AndroidViewModel(app) {
             "سلام، دستیار یادآور پرو هستم.\n" +
                 "بدون اینترنت هم می‌فهمم:\n" +
                 "• ۶ و ۴۲ دقیقه صبح دارو بخور\n" +
+                "• یادآوری رفتن بعد از ۴۰ دقیقه\n" +
+                "• خرید بلیط نیم ساعت بعد\n" +
+                "• خوردن قرص هر هشت ساعت\n" +
                 "• شنبه تا چهارشنبه ساعت ۸ جلسه\n" +
-                "• هر روز ۹ صبح ورزش\n" +
                 "• یادآوری‌های امروز / سکوت شبانه\n" +
-                "چت آزاد روزمره جواب نمی‌دهم تا هزینه کلید کمتر شود. ابر فقط برای فهمیدن زمان و ثبت یادآوری است."
+                "چت آزاد روزمره جواب نمی‌دهم تا هزینه کلید کمتر شود. ابر فقط وقتی استفاده می‌شود که روی دستگاه نفهمم."
         private const val OFF_TOPIC =
             "من فقط دستیار یادآوری هستم؛ چت روزمره، شعر، آب‌وهوا یا مسائل مالی را جواب نمی‌دهم.\n" +
                 "بگو چه چیزی، چه ساعتی و کدام روزها یادآوری شود."
@@ -266,8 +289,10 @@ class AssistantViewModel(app: Application) : AndroidViewModel(app) {
             "تو فقط استخراج‌کننده یادآوری برای اپ یادآور پرو هستی. " +
                 "اگر پیام درباره ساخت/لیست/سکوت یادآوری است JSON برگردان، وگرنه {\"action\":\"refuse\"}. " +
                 "هرگز جوک، شعر، مشاوره مالی یا گفتگوی آزاد ننویس. " +
-                "فرمت: {\"action\":\"create\",\"title\":\"...\",\"hour\":6,\"minute\":42,\"plusDays\":0," +
-                "\"days\":[6,0,1,2,3],\"repeat\":\"CUSTOM|WEEKDAYS|DAILY|ONCE\",\"category\":\"کار\",\"alertType\":\"NOTIFICATION\"}. " +
+                "فرمت: {\"action\":\"create\",\"title\":\"...\",\"hour\":6,\"minute\":42,\"plusDays\":0,\"plusMinutes\":0," +
+                "\"intervalMinutes\":0,\"days\":[6,0,1,2,3],\"repeat\":\"CUSTOM|WEEKDAYS|DAILY|ONCE|CUSTOM_INTERVAL\",\"category\":\"کار\",\"alertType\":\"NOTIFICATION\"}. " +
+                "اگر زمان نسبی است (بعد از ۴۰ دقیقه، نیم ساعت بعد) plusMinutes را از الان بگذار و hour/minute را نادیده بگیر. " +
+                "اگر هر N ساعت/دقیقه است intervalMinutes را بگذار (هر ۸ ساعت=480) و repeat=CUSTOM_INTERVAL و plusMinutes را هم همان فاصله بگذار تا اولین زنگ N بعد باشد. " +
                 "days از شنبه=6 یکشنبه=0 دوشنبه=1 سه‌شنبه=2 چهارشنبه=3 پنجشنبه=4 جمعه=5. " +
                 "دقیقه را حتماً جدا کن. فارسی."
     }

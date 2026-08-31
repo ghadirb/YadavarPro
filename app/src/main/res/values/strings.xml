@@ -77,7 +77,7 @@
     <string name="nav_reminders">Reminders</string>
     <string name="nav_assistant">Assistant</string>
     <string name="assistant_title">Reminder assistant</string>
-    <string name="assistant_hint">6 and 42 minutes morning take medicine</string>
+    <string name="assistant_hint">go in 40 minutes / pill every 8 hours</string>
     <string name="assistant_send">Send</string>
     <string name="assistant_chip_today">Today</string>
     <string name="assistant_chip_tomorrow">6:42 morning</string>
