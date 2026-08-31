@@ -97,8 +97,8 @@ object AIHelper {
     suspend fun synthesizeSpeech(context: Context, text: String): File? = withContext(Dispatchers.IO) {
         val picked = pickKey(context) ?: return@withContext null
         val (key, hosted) = picked
-        val result = synthesizeWithModel(context, key, text, "tts-1")
-            ?: synthesizeWithModel(context, key, text, "gpt-4o-mini-tts")
+        val result = synthesizeWithModel(context, key, text, "gpt-4o-mini-tts")
+            ?: synthesizeWithModel(context, key, text, "tts-1")
         if (result != null && hosted) SubscriptionManager.recordAiUsage(context)
         result
     }
@@ -115,7 +115,7 @@ object AIHelper {
             connection.requestMethod = "POST"
             connection.doOutput = true
             connection.connectTimeout = 15000
-            connection.readTimeout = 25000
+            connection.readTimeout = 35000
             connection.setRequestProperty("Authorization", "Bearer ${key.key}")
             connection.setRequestProperty("Content-Type", "application/json")
             val body = JSONObject().apply {
@@ -123,6 +123,9 @@ object AIHelper {
                 put("voice", "alloy")
                 put("input", text.take(220))
                 put("response_format", "mp3")
+                if (model == "gpt-4o-mini-tts") {
+                    put("instructions", "Speak only in clear natural Persian (Farsi). Do not speak English.")
+                }
             }
             OutputStreamWriter(connection.outputStream).use { it.write(body.toString()) }
             if (connection.responseCode != HttpURLConnection.HTTP_OK) return null

@@ -121,6 +121,7 @@ class SmartReminderTtsService : Service() {
 
             val audio = result?.file
             if (audio != null && audio.exists() && audio.length() >= 64L) {
+                Log.i(TAG, "playing cloud TTS bytes=${audio.length()} text=${spoken.take(80)}")
                 playCloud(audio.absolutePath)
                 return@launch
             }
@@ -411,7 +412,7 @@ class SmartReminderTtsService : Service() {
         private const val NOTIFICATION_ID_BASE = 90000
         private const val REPEAT_GAP_MS = 1600L
         private const val MAX_DURATION_MS = 20 * 60 * 1000L
-        private const val CLOUD_TIMEOUT_MS = 40_000L
+        private const val CLOUD_TIMEOUT_MS = 50_000L
         private const val SPOKEN_SYSTEM_PROMPT =
             "فقط فارسی محاوره‌ای. یک جمله کوتاه برای خواندن با صدای بلند برگردان. بدون انگلیسی، بدون اموجی، بدون نقل‌قول، بدون توضیح. مثال: سلام، الان وقتشه که قرص فشارتو بخوری."
 

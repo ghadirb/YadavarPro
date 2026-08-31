@@ -25,7 +25,7 @@ object AIBackendClient {
     private const val CONNECT_TIMEOUT_MS = 15_000
     private const val READ_TIMEOUT_MS = 35_000
     private const val CHAT_READ_TIMEOUT_MS = 20_000
-    private const val TTS_READ_TIMEOUT_MS = 35_000
+    private const val TTS_READ_TIMEOUT_MS = 45_000
     private const val MAX_REDIRECTS = 5
 
     var lastError: String? = null

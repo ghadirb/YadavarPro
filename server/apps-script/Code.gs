@@ -1,6 +1,6 @@
-// Yadavar Pro Apps Script backend — version 6
+// Yadavar Pro Apps Script backend — version 7
 // After pasting this file you MUST: Deploy → Manage deployments → pencil → New version → Deploy
-// A live v6 /exec URL with no ?path= returns {"ok":true,"service":"yadavar-pro","version":6,...}
+// A live v7 /exec URL with no ?path= returns {"ok":true,"service":"yadavar-pro","version":7,...}
 // not {"error":"unknown_path"}.
 //
 // Google Apps Script version of the Maliar Pro billing backend - a free, no-hosting-
@@ -45,6 +45,7 @@
 //      GAPGPT_API_KEY       = provider key (Script Property only)
 //      LIARA_API_KEY        = provider key (Script Property only)
 //      AI_MODEL             = gpt-4o-mini
+//      AI_TTS_MODEL         = gpt-4o-mini-tts
 //      AI_DAILY_LIMIT       = 10
 // 4. Deploy -> New deployment -> type: "Web app".
 //      Execute as: Me
@@ -184,7 +185,7 @@ function routeRequest_(e) {
     return jsonOutput_({
       ok: true,
       service: 'yadavar-pro',
-      version: 6,
+      version: 7,
       routes: ['status', 'request', 'callback', 'paypingCallback', 'verifyStore', 'aiChat', 'aiStt', 'aiTts', 'aiSmartAlert'],
       hint: 'این آدرس سالم است. اپ با ?path=status و ?path=aiChat صدا می‌زند.'
     });
@@ -418,47 +419,16 @@ function looksLikeAudio_(bytes) {
   return bytes.length > 800;
 }
 
-function wavFromPcm16_(pcmBytes, sampleRate) {
-  const rate = sampleRate || 24000;
-  const dataSize = pcmBytes.length;
-  const header = [];
-  function pushStr(s) {
-    for (let i = 0; i < s.length; i++) header.push(s.charCodeAt(i) & 255);
-  }
-  function push16(v) {
-    header.push(v & 255, (v >> 8) & 255);
-  }
-  function push32(v) {
-    header.push(v & 255, (v >> 8) & 255, (v >> 16) & 255, (v >> 24) & 255);
-  }
-  pushStr('RIFF');
-  push32(36 + dataSize);
-  pushStr('WAVE');
-  pushStr('fmt ');
-  push32(16);
-  push16(1);
-  push16(1);
-  push32(rate);
-  push32(rate * 2);
-  push16(2);
-  push16(16);
-  pushStr('data');
-  push32(dataSize);
-  const wav = [];
-  for (let i = 0; i < header.length; i++) wav.push(header[i]);
-  for (let i = 0; i < dataSize; i++) {
-    const b = pcmBytes[i];
-    wav.push(typeof b === 'number' && b < 0 ? b + 256 : b);
-  }
-  return Utilities.base64Encode(wav);
-}
-
-function synthesizeOpenAiSpeech_(text, model, timeoutSec) {
+function synthesizeOpenAiSpeech_(text, model, timeoutSec, withInstructions) {
   const cfg = aiConfig_();
+  const body = { model: model, voice: 'alloy', input: text, response_format: 'mp3' };
+  if (withInstructions) {
+    body.instructions = 'Speak only in clear natural Persian (Farsi). Do not speak English.';
+  }
   const response = aiFetch_(cfg.baseUrl + '/audio/speech', {
     apiKey: cfg.key,
-    body: { model: model, voice: 'alloy', input: text, response_format: 'mp3' }
-  }, timeoutSec || 12);
+    body: body
+  }, timeoutSec || 25);
   const status = response.getResponseCode();
   if (status < 200 || status >= 300) return { error: 'tts_unavailable', status: status };
   const contentType = headerValue_(response.getHeaders(), 'Content-Type').toLowerCase();
@@ -476,63 +446,22 @@ function synthesizeOpenAiSpeech_(text, model, timeoutSec) {
   return { audioBase64: Utilities.base64Encode(bytes), mimeType: 'audio/mpeg' };
 }
 
-function synthesizeGeminiTts_(text) {
-  const cfg = aiConfig_();
-  const url = cfg.baseUrl + '/models/gemini-2.5-flash-preview-tts:generateContent';
-  const response = UrlFetchApp.fetch(url, {
-    method: 'post',
-    contentType: 'application/json',
-    muteHttpExceptions: true,
-    followRedirects: true,
-    timeout: 18,
-    headers: { Authorization: 'Bearer ' + cfg.key },
-    payload: JSON.stringify({
-      contents: 'با صدای واضح و محاوره‌ای فارسی بگو: ' + text,
-      generationConfig: {
-        response_modalities: ['AUDIO'],
-        speech_config: {
-          voice_config: {
-            prebuilt_voice_config: { voice_name: 'Kore' }
-          }
-        }
-      }
-    })
-  });
-  const status = response.getResponseCode();
-  if (status < 200 || status >= 300) return { error: 'tts_unavailable', status: status };
-  const data = JSON.parse(response.getContentText());
-  const part = data && data.candidates && data.candidates[0] && data.candidates[0].content
-    && data.candidates[0].content.parts && data.candidates[0].content.parts[0]
-    ? data.candidates[0].content.parts[0] : null;
-  const inline = part && (part.inlineData || part.inline_data);
-  const b64 = inline && (inline.data || inline.Data);
-  if (!b64) return { error: 'tts_unavailable', status: status };
-  const mime = String(inline.mimeType || inline.mime_type || '').toLowerCase();
-  if (mime.indexOf('mpeg') !== -1 || mime.indexOf('mp3') !== -1) {
-    return { audioBase64: b64, mimeType: 'audio/mpeg' };
-  }
-  if (mime.indexOf('wav') !== -1) {
-    return { audioBase64: b64, mimeType: 'audio/wav' };
-  }
-  const pcm = Utilities.base64Decode(b64);
-  const rateMatch = mime.match(/rate=(\d+)/);
-  const sampleRate = rateMatch ? parseInt(rateMatch[1], 10) : 24000;
-  return { audioBase64: wavFromPcm16_(pcm, sampleRate), mimeType: 'audio/wav' };
-}
-
 function synthesizeSpeech_(text) {
+  const preferred = getSetting_('AI_TTS_MODEL', 'gpt-4o-mini-tts');
   try {
-    const first = synthesizeOpenAiSpeech_(text, 'tts-1', 10);
+    const first = synthesizeOpenAiSpeech_(text, preferred, 25, preferred === 'gpt-4o-mini-tts');
     if (first && first.audioBase64) return first;
+    if (preferred === 'gpt-4o-mini-tts' && first && first.status) {
+      const retry = synthesizeOpenAiSpeech_(text, preferred, 25, false);
+      if (retry && retry.audioBase64) return retry;
+    }
   } catch (err) {}
-  try {
-    const gemini = synthesizeGeminiTts_(text);
-    if (gemini && gemini.audioBase64) return gemini;
-  } catch (err) {}
-  try {
-    const second = synthesizeOpenAiSpeech_(text, 'gpt-4o-mini-tts', 10);
-    if (second && second.audioBase64) return second;
-  } catch (err) {}
+  if (preferred !== 'tts-1') {
+    try {
+      const second = synthesizeOpenAiSpeech_(text, 'tts-1', 20, false);
+      if (second && second.audioBase64) return second;
+    } catch (err) {}
+  }
   return { error: 'tts_unavailable' };
 }
 
