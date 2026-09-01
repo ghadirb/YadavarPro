@@ -2,6 +2,7 @@ package com.ghadirb.yadavar.ui.profile
 
 import android.app.TimePickerDialog
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -10,6 +11,7 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import com.ghadirb.yadavar.BuildConfig
 import com.ghadirb.yadavar.R
 import com.ghadirb.yadavar.databinding.FragmentProfileBinding
 import com.ghadirb.yadavar.services.YadavarBackgroundService
@@ -62,6 +64,7 @@ class ProfileFragment : Fragment() {
         bindBackground()
         bindBackup()
         bindQuietHours()
+        bindMaliarPromo()
         binding.buttonMoreSettings.setOnClickListener {
             startActivity(Intent(requireContext(), SettingsActivity::class.java))
         }
@@ -128,6 +131,21 @@ class ProfileFragment : Fragment() {
         val p = viewModel.prefs
         binding.buttonQuietStart.text = getString(R.string.quiet_from, p.formatMinutes(p.quietStartMinutes))
         binding.buttonQuietEnd.text = getString(R.string.quiet_until, p.formatMinutes(p.quietEndMinutes))
+    }
+
+    private fun bindMaliarPromo() {
+        val open = View.OnClickListener { openMaliarPro() }
+        binding.cardMaliarPromo.setOnClickListener(open)
+        binding.buttonMaliarPromo.setOnClickListener(open)
+    }
+
+    private fun openMaliarPro() {
+        val launch = requireContext().packageManager.getLaunchIntentForPackage("com.maliar.pro")
+        if (launch != null) {
+            startActivity(launch)
+            return
+        }
+        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(BuildConfig.MALIAR_STORE_URL)))
     }
 
     private fun pickQuietTime(start: Boolean) {

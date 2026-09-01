@@ -162,7 +162,7 @@ object SubscriptionManager {
             url = appendParam(url, "channel", channel.apiValue)
             url = appendParam(url, "purchaseToken", purchaseToken)
             val connection = URL(url).openConnection() as HttpURLConnection
-            connection.requestMethod = "POST"
+            connection.requestMethod = "GET"
             connection.connectTimeout = 15000
             connection.readTimeout = 15000
             if (connection.responseCode == HttpURLConnection.HTTP_OK) {

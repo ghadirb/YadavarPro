@@ -50,8 +50,8 @@ android {
         applicationId = "com.ghadirb.yadavar"
         minSdk = 24
         targetSdk = 34
-        versionCode = 13
-        versionName = "1.4.8"
+        versionCode = 14
+        versionName = "1.4.9"
         buildConfigField("String", "AI_BACKEND_URL", buildConfigString(aiBackendUrl))
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -63,6 +63,7 @@ android {
         create("direct") {
             dimension = "store"
             buildConfigField("String", "STORE_CHANNEL", "\"direct\"")
+            buildConfigField("String", "MALIAR_STORE_URL", "\"https://cafebazaar.ir/app/com.maliar.pro\"")
             buildConfigField("String", "IAB_PUBLIC_KEY", "\"\"")
             manifestPlaceholders["marketApplicationId"] = "com.ghadirb.yadavar"
             manifestPlaceholders["marketBindAddress"] = "com.ghadirb.yadavar.UNUSED_BILLING_BIND"
@@ -71,6 +72,7 @@ android {
         create("bazaar") {
             dimension = "store"
             buildConfigField("String", "STORE_CHANNEL", "\"bazaar\"")
+            buildConfigField("String", "MALIAR_STORE_URL", "\"https://cafebazaar.ir/app/com.maliar.pro\"")
             buildConfigField("String", "IAB_PUBLIC_KEY", buildConfigString(projectSetting("BAZAAR_IAB_PUBLIC_KEY")))
             manifestPlaceholders["marketApplicationId"] = "com.farsitel.bazaar"
             manifestPlaceholders["marketBindAddress"] = "ir.cafebazaar.pardakht.InAppBillingService.BIND"
@@ -79,6 +81,7 @@ android {
         create("myket") {
             dimension = "store"
             buildConfigField("String", "STORE_CHANNEL", "\"myket\"")
+            buildConfigField("String", "MALIAR_STORE_URL", "\"https://myket.ir/app/com.maliar.pro\"")
             buildConfigField("String", "IAB_PUBLIC_KEY", buildConfigString(projectSetting("MYKET_IAB_PUBLIC_KEY")))
             manifestPlaceholders["marketApplicationId"] = "ir.mservices.market"
             manifestPlaceholders["marketBindAddress"] = "ir.mservices.market.InAppBillingService.BIND"

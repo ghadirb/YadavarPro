@@ -157,6 +157,9 @@
     <string name="bg_disabled_toast">حالت پایداری یادآوری غیرفعال شد</string>
     <string name="profile_title">پروفایل</string>
     <string name="profile_more_settings">سایر تنظیمات</string>
+    <string name="maliar_promo_title">مالیار پرو</string>
+    <string name="maliar_promo_body">دستیار مالی هوشمند: حسابداری، چک، قسط و گزارش. از سازندهٔ همین برنامه.</string>
+    <string name="maliar_promo_action">مشاهده در فروشگاه</string>
     <string name="profile_quiet_hint">یادآوری‌های با اولویت بالا طبق معمول صدا می‌دهند؛ بقیه در این بازه بی‌صدا می‌مانند.</string>
     <string name="quiet_from">از %1$s</string>
     <string name="quiet_until">تا %1$s</string>

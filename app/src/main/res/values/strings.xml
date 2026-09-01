@@ -157,6 +157,9 @@
     <string name="bg_disabled_toast">Background keep-alive is off</string>
     <string name="profile_title">Profile</string>
     <string name="profile_more_settings">More settings</string>
+    <string name="maliar_promo_title">Maliar Pro</string>
+    <string name="maliar_promo_body">Smart finance assistant: accounting, checks, installments and reports. From the same developer.</string>
+    <string name="maliar_promo_action">View in store</string>
     <string name="profile_quiet_hint">High-priority reminders still ring. Other reminders stay silent in this window.</string>
     <string name="quiet_from">From %1$s</string>
     <string name="quiet_until">Until %1$s</string>

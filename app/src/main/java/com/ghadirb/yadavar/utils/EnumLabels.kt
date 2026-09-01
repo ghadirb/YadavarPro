@@ -53,7 +53,9 @@ object EnumLabels {
         else -> name
     }
 
-    fun reminderTypes() = ReminderType.entries.map { LabeledOption(it.name, reminderType(it.name)) }
+    fun reminderTypes() = ReminderType.entries
+        .filter { it != ReminderType.LOCATION_BASED }
+        .map { LabeledOption(it.name, reminderType(it.name)) }
     fun priorities() = Priority.entries.map { LabeledOption(it.name, priority(it.name)) }
     fun alertTypes() = AlertType.entries.map { LabeledOption(it.name, alertType(it.name)) }
     fun repeats() = RepeatPattern.entries.map { LabeledOption(it.name, repeat(it.name)) }

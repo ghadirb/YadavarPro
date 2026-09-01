@@ -83,6 +83,30 @@ Deploy → Manage deployments → مداد → Version: New version → Deploy
 5. آدرس `https://script.google.com/macros/s/AKfycb.../exec` را کپی کنید. همین آدرس
    در اپ داخل `SubscriptionManager` و `AI_BACKEND_URL` تنظیم شده است.
 
+## امنیت (چه چیزی در Script Properties بگذار)
+
+کلید را داخل کد نگذار. همه در **Project Settings → Script Properties**:
+
+| Property | لازم برای | مقدار |
+|---|---|---|
+| `GAPGPT_API_KEY` | چت و TTS | کلید GapGPT |
+| `AI_PROVIDER` | چت و TTS | `gapgpt` |
+| `AI_MODEL` | اختیاری | `gpt-4o-mini` |
+| `AI_TTS_MODEL` | اختیاری | `gpt-4o-mini-tts` |
+| `APP_PACKAGE_NAME` | بازار و مایکت | `com.ghadirb.yadavar` |
+| `BAZAAR_API_TOKEN` | تایید خرید بازار | توکن پیشخان بازار |
+| `MYKET_ACCESS_TOKEN` | تایید خرید مایکت | توکن API مایکت |
+| `PAYMENT_GATEWAY` | فقط نصب مستقیم | `zarinpal` / `nextpay` / `payping` |
+
+برای **بازار و مایکت** درگاه زرین‌پال لازم نیست. همان `APP_PACKAGE_NAME` + توکن فروشگاه کافی است.
+
+دیپلوی وب‌اپ:
+- Execute as: **Me**
+- Who has access: **Anyone** (اپ بدون لاگین گوگل کار کند)
+- پروژه Apps Script را با دیگران به‌صورت Editor به اشتراک نگذار.
+
+OAuth اسکریپت فقط UrlFetch به GapGPT / بازار / مایکت است. بعد از اولین Deploy یک‌بار Authorize کن.
+
 ## محدودیت‌ها
 - ذخیره‌سازی با `PropertiesService` است؛ برای صدها/چندهزار کاربر کافی است.
 - هر بار که کد را ویرایش می‌کنید باید از Manage deployments نسخهٔ جدید Deploy شود.

@@ -46,7 +46,7 @@ class ReminderActionReceiver : BroadcastReceiver() {
                     ACTION_CALL -> {
                         val reminder = dao.getById(reminderId)
                         if (reminder != null && reminder.contactPhoneNumber.isNotBlank()) {
-                            val callIntent = Intent(Intent.ACTION_CALL, Uri.parse("tel:${reminder.contactPhoneNumber}")).apply {
+                            val callIntent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${reminder.contactPhoneNumber}")).apply {
                                 flags = Intent.FLAG_ACTIVITY_NEW_TASK
                             }
                             context.startActivity(callIntent)

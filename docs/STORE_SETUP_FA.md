@@ -79,7 +79,7 @@ MYKET_ACCESS_TOKEN=توکن API مایکت
 
 ## مرحله 5: آدرس سرور در اپ
 
-در `app/src/main/java/com/maliar/pro/utils/SubscriptionManager.kt` مقدارهای `CHANGE-ME`
+در `app/src/main/java/com/ghadirb/yadavar/utils/SubscriptionManager.kt` مقدارهای `CHANGE-ME`
 را با آدرس سرور خود جایگزین کنید:
 
 ```kotlin
