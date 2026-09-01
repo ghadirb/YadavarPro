@@ -9,4 +9,5 @@
     <color name="quiet_banner">#163532</color>
     <color name="on_quiet_banner">#CCFBF1</color>
     <color name="surface_accent">#FF14201E</color>
+    <color name="card_surface">#FF163532</color>
 </resources>

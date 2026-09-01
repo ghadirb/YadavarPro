@@ -65,6 +65,7 @@
     <string name="focus_on_banner">Focus mode is on — only critical reminders ring</string>
     <string name="group_by_category">Group list by category</string>
     <string name="backup_title">Backup</string>
+    <string name="backup_title_full">Backup and restore</string>
     <string name="backup_hint">Save all reminders to a JSON file, or restore them on a new device.</string>
     <string name="backup_export">Export JSON backup</string>
     <string name="backup_import">Restore from JSON</string>
@@ -76,6 +77,7 @@
     <string name="widget_add">Add</string>
     <string name="nav_reminders">Reminders</string>
     <string name="nav_assistant">Assistant</string>
+    <string name="nav_profile">Profile</string>
     <string name="assistant_title">Reminder assistant</string>
     <string name="assistant_hint">go in 40 minutes / pill every 8 hours</string>
     <string name="assistant_send">Send</string>
@@ -150,6 +152,14 @@
     <string name="notif_mode_action">With actions (done / snooze)</string>
     <string name="bg_title">Run in background</string>
     <string name="bg_enable">Keep the app alive so alarms stay reliable</string>
+    <string name="bg_hint">Shows a silent notification so alarms still fire with the screen off.</string>
+    <string name="bg_enabled_toast">Background keep-alive is on</string>
+    <string name="bg_disabled_toast">Background keep-alive is off</string>
+    <string name="profile_title">Profile</string>
+    <string name="profile_more_settings">More settings</string>
+    <string name="profile_quiet_hint">High-priority reminders still ring. Other reminders stay silent in this window.</string>
+    <string name="quiet_from">From %1$s</string>
+    <string name="quiet_until">Until %1$s</string>
     <string name="bg_running_title">Yadavar Pro is running in the background</string>
     <string name="bg_running_body">Alarms and spoken alerts still fire with the screen off</string>
     <string name="bg_channel_name">Background</string>

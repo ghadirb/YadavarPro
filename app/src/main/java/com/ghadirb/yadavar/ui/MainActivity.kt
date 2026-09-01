@@ -1,6 +1,7 @@
 package com.ghadirb.yadavar.ui
 
 import android.Manifest
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.result.contract.ActivityResultContracts
@@ -10,6 +11,7 @@ import com.ghadirb.yadavar.R
 import com.ghadirb.yadavar.assistant.AssistantFragment
 import com.ghadirb.yadavar.databinding.ActivityMainBinding
 import com.ghadirb.yadavar.dialogs.AddReminderDialog
+import com.ghadirb.yadavar.ui.profile.ProfileFragment
 import com.ghadirb.yadavar.ui.reminders.RemindersFragment
 import com.ghadirb.yadavar.utils.PreferencesManager
 import com.ghadirb.yadavar.utils.QuietHoursManager
@@ -81,11 +83,27 @@ class MainActivity : AppCompatActivity() {
             when (item.itemId) {
                 R.id.nav_reminders -> showTab(TAB_REMINDERS)
                 R.id.nav_assistant -> showTab(TAB_ASSISTANT)
+                R.id.nav_profile -> showTab(TAB_PROFILE)
             }
             true
         }
 
-        if (intent?.getBooleanExtra(EXTRA_QUICK_ADD, false) == true) {
+        handleOpenIntent(intent, applyExtras = savedInstanceState == null)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleOpenIntent(intent, applyExtras = true)
+    }
+
+    private fun handleOpenIntent(intent: Intent?, applyExtras: Boolean) {
+        if (intent == null || !applyExtras) return
+        val openReminder = intent.getLongExtra(EXTRA_OPEN_REMINDER_ID, -1L)
+        if (openReminder >= 0L || intent.getBooleanExtra(EXTRA_FROM_NOTIFICATION, false)) {
+            binding.bottomNav.selectedItemId = R.id.nav_reminders
+        }
+        if (intent.getBooleanExtra(EXTRA_QUICK_ADD, false)) {
             binding.bottomNav.selectedItemId = R.id.nav_reminders
             AddReminderDialog().show(supportFragmentManager, "add_reminder")
         }
@@ -94,12 +112,16 @@ class MainActivity : AppCompatActivity() {
     private fun showTab(tag: String) {
         val fm = supportFragmentManager
         val tx = fm.beginTransaction()
-        listOf(TAB_REMINDERS, TAB_ASSISTANT).forEach { t ->
+        listOf(TAB_REMINDERS, TAB_ASSISTANT, TAB_PROFILE).forEach { t ->
             fm.findFragmentByTag(t)?.let { tx.hide(it) }
         }
         val existing = fm.findFragmentByTag(tag)
         if (existing == null) {
-            val fragment = if (tag == TAB_ASSISTANT) AssistantFragment() else RemindersFragment()
+            val fragment = when (tag) {
+                TAB_ASSISTANT -> AssistantFragment()
+                TAB_PROFILE -> ProfileFragment()
+                else -> RemindersFragment()
+            }
             tx.add(R.id.fragment_container, fragment, tag)
         } else {
             tx.show(existing)
@@ -109,8 +131,11 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         const val EXTRA_QUICK_ADD = "quick_add"
+        const val EXTRA_OPEN_REMINDER_ID = "open_reminder_id"
+        const val EXTRA_FROM_NOTIFICATION = "from_notification"
         const val ACTION_TOGGLE_FOCUS = "com.ghadirb.yadavar.TOGGLE_FOCUS"
         private const val TAB_REMINDERS = "reminders"
         private const val TAB_ASSISTANT = "assistant"
+        private const val TAB_PROFILE = "profile"
     }
 }

@@ -65,6 +65,7 @@
     <string name="focus_on_banner">حالت تمرکز روشن است — فقط یادآوری بحرانی صدا می‌دهد</string>
     <string name="group_by_category">گروه‌بندی لیست بر اساس دسته</string>
     <string name="backup_title">پشتیبان</string>
+    <string name="backup_title_full">پشتیبان‌گیری و بازیابی</string>
     <string name="backup_hint">همه‌ی یادآوری‌ها رو توی یه فایل JSON ذخیره کن، یا روی گوشی جدید برشون گردون.</string>
     <string name="backup_export">خروجی JSON</string>
     <string name="backup_import">بازیابی از JSON</string>
@@ -76,6 +77,7 @@
     <string name="widget_add">جدید</string>
     <string name="nav_reminders">یادآوری‌ها</string>
     <string name="nav_assistant">دستیار</string>
+    <string name="nav_profile">پروفایل</string>
     <string name="assistant_title">دستیار یادآوری</string>
     <string name="assistant_hint">رفتن بعد از ۴۰ دقیقه / قرص هر هشت ساعت</string>
     <string name="assistant_send">ارسال</string>
@@ -150,6 +152,14 @@
     <string name="notif_mode_action">با اکشن (انجام شد / بعداً)</string>
     <string name="bg_title">کار در پس‌زمینه</string>
     <string name="bg_enable">نگه‌داشتن برنامه در پس‌زمینه برای زنگ مطمئن‌تر</string>
+    <string name="bg_hint">یک نوتیفیکیشن بی‌صدا نشان می‌دهد تا زنگ‌ها حتی با صفحه خاموش سر وقت برسند.</string>
+    <string name="bg_enabled_toast">حالت پایداری یادآوری فعال شد</string>
+    <string name="bg_disabled_toast">حالت پایداری یادآوری غیرفعال شد</string>
+    <string name="profile_title">پروفایل</string>
+    <string name="profile_more_settings">سایر تنظیمات</string>
+    <string name="profile_quiet_hint">یادآوری‌های با اولویت بالا طبق معمول صدا می‌دهند؛ بقیه در این بازه بی‌صدا می‌مانند.</string>
+    <string name="quiet_from">از %1$s</string>
+    <string name="quiet_until">تا %1$s</string>
     <string name="bg_running_title">یادآور پرو در پس‌زمینه فعال است</string>
     <string name="bg_running_body">زنگ‌ها و هشدار هوشمند حتی با صفحه خاموش کار می‌کنند</string>
     <string name="bg_channel_name">فعالیت پس‌زمینه</string>

@@ -50,8 +50,8 @@ android {
         applicationId = "com.ghadirb.yadavar"
         minSdk = 24
         targetSdk = 34
-        versionCode = 12
-        versionName = "1.4.7"
+        versionCode = 13
+        versionName = "1.4.8"
         buildConfigField("String", "AI_BACKEND_URL", buildConfigString(aiBackendUrl))
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

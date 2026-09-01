@@ -14,6 +14,7 @@ import com.ghadirb.yadavar.database.AlertType
 import com.ghadirb.yadavar.database.ReminderEntity
 import com.ghadirb.yadavar.receivers.ReminderActionReceiver
 import com.ghadirb.yadavar.receivers.SmartReminderTtsService
+import com.ghadirb.yadavar.ui.MainActivity
 import com.ghadirb.yadavar.ui.reminders.FullScreenAlarmActivity
 import com.ghadirb.yadavar.ui.subscription.SubscriptionActivity
 
@@ -39,6 +40,22 @@ object NotificationHelper {
             putExtra("alert_type", reminder.alertType)
             putExtra("sound_uri", reminder.soundUri)
         }
+    }
+
+    fun openAppPendingIntent(context: Context, requestCode: Int = 1, reminderId: Long = -1L): PendingIntent {
+        val intent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                Intent.FLAG_ACTIVITY_SINGLE_TOP
+            putExtra(MainActivity.EXTRA_FROM_NOTIFICATION, true)
+            if (reminderId >= 0L) putExtra(MainActivity.EXTRA_OPEN_REMINDER_ID, reminderId)
+        }
+        return PendingIntent.getActivity(
+            context,
+            requestCode,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
     }
 
     fun show(context: Context, reminder: ReminderEntity) {
@@ -130,6 +147,7 @@ object NotificationHelper {
             .setContentText(reminder.description.ifBlank { reminder.notes })
             .setAutoCancel(true)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
+            .setContentIntent(openAppPendingIntent(context, reminder.id.toInt(), reminder.id))
             .setDeleteIntent(actionPendingIntent(context, reminder, ReminderActionReceiver.ACTION_DONE))
 
         if (mode == "action") {

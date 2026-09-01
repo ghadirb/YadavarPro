@@ -9,6 +9,7 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.ghadirb.yadavar.R
+import com.ghadirb.yadavar.utils.NotificationHelper
 import com.ghadirb.yadavar.utils.PreferencesManager
 import com.ghadirb.yadavar.utils.QuietHoursManager
 
@@ -48,7 +49,8 @@ class QuietHoursReceiver : BroadcastReceiver() {
             .setContentTitle(title)
             .setContentText(body)
             .setAutoCancel(true)
+            .setContentIntent(NotificationHelper.openAppPendingIntent(context, 9101))
             .build()
-        NotificationManagerCompat.from(context).notify(9001, n)
+        NotificationManagerCompat.from(context).notify(9101, n)
     }
 }
