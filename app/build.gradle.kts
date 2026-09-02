@@ -131,6 +131,36 @@ android {
     }
 }
 
+// Guardrail for the exact failure Myket's reviewer reported ("اتصال به فروشگاه برقرار
+// نشد"): that happens when a bazaar/myket RELEASE build is produced with a blank
+// IAB public key, because StoreBillingHelper.connect() silently reports "not ready" in
+// that case (see StoreBillingHelper.kt). Fail the build loudly instead of shipping an
+// APK that can never take a payment. Debug builds and the "direct" flavor are exempt.
+gradle.taskGraph.whenReady {
+    val bazaarKeyBlank = projectSetting("BAZAAR_IAB_PUBLIC_KEY").isBlank()
+    val myketKeyBlank = projectSetting("MYKET_IAB_PUBLIC_KEY").isBlank()
+    allTasks.forEach { task ->
+        val n = task.name
+        val isReleasePackagingTask = n.startsWith("assemble") || n.startsWith("bundle")
+        if (isReleasePackagingTask && n.endsWith("BazaarRelease") && bazaarKeyBlank) {
+            throw GradleException(
+                "BAZAAR_IAB_PUBLIC_KEY تنظیم نشده است. ساخت ریلیز بازار بدون این مقدار " +
+                    "متوقف شد چون خرید درون‌برنامه‌ای کار نخواهد کرد (پیام «اتصال به " +
+                    "فروشگاه برقرار نشد» به کاربر نمایش داده می‌شود). این مقدار را در " +
+                    "keystore.properties یا Secret مربوطه در گیت‌هاب اکشنز تنظیم کنید."
+            )
+        }
+        if (isReleasePackagingTask && n.endsWith("MyketRelease") && myketKeyBlank) {
+            throw GradleException(
+                "MYKET_IAB_PUBLIC_KEY تنظیم نشده است. ساخت ریلیز مایکت بدون این مقدار " +
+                    "متوقف شد چون خرید درون‌برنامه‌ای کار نخواهد کرد (پیام «اتصال به " +
+                    "فروشگاه برقرار نشد» به کاربر نمایش داده می‌شود). این مقدار را در " +
+                    "keystore.properties یا Secret مربوطه در گیت‌هاب اکشنز تنظیم کنید."
+            )
+        }
+    }
+}
+
 dependencies {
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.appcompat:appcompat:1.6.1")
