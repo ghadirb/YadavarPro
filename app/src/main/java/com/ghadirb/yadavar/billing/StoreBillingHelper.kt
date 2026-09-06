@@ -1,6 +1,7 @@
 package com.ghadirb.yadavar.billing
 
 import android.app.Activity
+import android.util.Log
 import ir.myket.billingclient.IabHelper
 import ir.myket.billingclient.util.IabResult
 import ir.myket.billingclient.util.Inventory
@@ -22,18 +23,32 @@ internal class StoreBillingHelper(private val publicKey: () -> String) {
     ) {
         val key = publicKey()
         if (key.isBlank()) {
+            Log.e("MyketIAB", "connect() aborted: IAB public key is blank")
             onReady(false)
             return
         }
-        val instance = IabHelper(activity, key)
+        val instance = try {
+            IabHelper(activity, key).apply { enableDebugLogging(true, "MyketIAB") }
+        } catch (t: Throwable) {
+            Log.e("MyketIAB", "IabHelper construction failed", t)
+            onReady(false)
+            return
+        }
         helper = instance
-        instance.startSetup { result: IabResult ->
-            if (!result.isSuccess) {
-                onReady(false)
-                return@startSetup
+        try {
+            instance.startSetup { result: IabResult ->
+                if (!result.isSuccess) {
+                    Log.e("MyketIAB", "startSetup failed: response=${result.response} message=${result.message}")
+                    onReady(false)
+                    return@startSetup
+                }
+                Log.i("MyketIAB", "startSetup succeeded")
+                onReady(true)
+                recoverPendingPurchases(onPendingPurchase)
             }
-            onReady(true)
-            recoverPendingPurchases(onPendingPurchase)
+        } catch (t: Throwable) {
+            Log.e("MyketIAB", "startSetup threw", t)
+            onReady(false)
         }
     }
 
@@ -51,7 +66,10 @@ internal class StoreBillingHelper(private val publicKey: () -> String) {
         }
         current.launchPurchaseFlow(activity, sku, { result: IabResult, purchase: Purchase? ->
             when {
-                result.isFailure -> onResult(PurchaseResult.Failed(result.message ?: "خرید ناموفق بود"))
+                result.isFailure -> {
+                    Log.e("MyketIAB", "purchase failed: response=${result.response} message=${result.message}")
+                    onResult(PurchaseResult.Failed(result.message ?: "خرید ناموفق بود"))
+                }
                 purchase == null -> onResult(PurchaseResult.Failed("پاسخ نامعتبر از فروشگاه"))
                 else -> {
                     purchasesByToken[purchase.token] = purchase
