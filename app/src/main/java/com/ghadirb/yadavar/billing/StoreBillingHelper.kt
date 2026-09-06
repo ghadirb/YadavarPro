@@ -1,6 +1,8 @@
 package com.ghadirb.yadavar.billing
 
 import android.app.Activity
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import ir.myket.billingclient.IabHelper
 import ir.myket.billingclient.util.IabResult
@@ -22,6 +24,7 @@ internal class StoreBillingHelper(private val publicKey: () -> String) {
         onPendingPurchase: (PurchaseResult.Success) -> Unit
     ) {
         val key = publicKey()
+        Log.i("MyketIAB", "connect() called, key length=${key.length}")
         if (key.isBlank()) {
             Log.e("MyketIAB", "connect() aborted: IAB public key is blank")
             onReady(false)
@@ -35,8 +38,20 @@ internal class StoreBillingHelper(private val publicKey: () -> String) {
             return
         }
         helper = instance
+
+        // Diagnostic-only: prove whether the async callback ever fires at all.
+        var callbackFired = false
+        Handler(Looper.getMainLooper()).postDelayed({
+            if (!callbackFired) {
+                Log.e("MyketIAB", "TIMEOUT: startSetup callback never fired within 8s. " +
+                        "This means the service bind/response itself is hanging, not returning an error.")
+            }
+        }, 8000)
+
         try {
+            Log.i("MyketIAB", "calling startSetup()...")
             instance.startSetup { result: IabResult ->
+                callbackFired = true
                 if (!result.isSuccess) {
                     Log.e("MyketIAB", "startSetup failed: response=${result.response} message=${result.message}")
                     onReady(false)
@@ -46,6 +61,7 @@ internal class StoreBillingHelper(private val publicKey: () -> String) {
                 onReady(true)
                 recoverPendingPurchases(onPendingPurchase)
             }
+            Log.i("MyketIAB", "startSetup() returned control (async call dispatched)")
         } catch (t: Throwable) {
             Log.e("MyketIAB", "startSetup threw", t)
             onReady(false)
